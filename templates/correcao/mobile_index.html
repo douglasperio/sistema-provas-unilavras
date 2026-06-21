@@ -59,37 +59,6 @@
   </div>
 </a>
 
-{% if aplicacoes %}
-  {% for ap in aplicacoes %}
-  <a href="/mobile/{{ ap.id }}" class="ap-card">
-    <div class="d-flex align-items-start">
-      <div class="flex-fill">
-        <div class="ap-titulo">{{ ap.prova.titulo }}</div>
-        <div class="ap-sub">
-          {{ ap.turma.nome if ap.turma else '—' }}
-          {% if ap.turma and ap.turma.periodo %}· {{ ap.turma.periodo }}{% endif %}
-          · {{ ap.data_aplicacao.strftime('%d/%m/%Y') }}
-        </div>
-        <div class="ap-badges">
-          {% set pendentes = ap.total_alunos - ap.total_corrigidos %}
-          {% if pendentes > 0 %}
-          <span class="badge-pend"><i class="bi bi-hourglass-split"></i> {{ pendentes }} pendente(s)</span>
-          {% endif %}
-          {% if ap.total_corrigidos > 0 %}
-          <span class="badge-ok"><i class="bi bi-check2"></i> {{ ap.total_corrigidos }} corrigido(s)</span>
-          {% endif %}
-        </div>
-      </div>
-      <span class="seta"><i class="bi bi-chevron-right"></i></span>
-    </div>
-  </a>
-  {% endfor %}
-{% else %}
-  <div class="empty">
-    <i class="bi bi-inbox" style="font-size:3rem; display:block; margin-bottom:.5rem;"></i>
-    Nenhuma prova aplicada ainda.
-  </div>
-{% endif %}
 
 </body>
 </html>
