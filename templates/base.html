@@ -67,7 +67,7 @@
 
     <div class="nav-section">Provas</div>
     <a href="{{ url_for('provas_index') }}" class="nav-link {% if 'prova' in request.endpoint %}active{% endif %}">
-      <i class="bi bi-file-earmark-text"></i> Provas
+      <i class="bi bi-file-earmark-text"></i> Gerar Provas
     </a>
     <a href="{{ url_for('turmas_index') }}" class="nav-link {% if 'turma' in request.endpoint or 'aluno' in request.endpoint %}active{% endif %}">
       <i class="bi bi-people"></i> Turmas & Alunos
