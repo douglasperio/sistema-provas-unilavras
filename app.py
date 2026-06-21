@@ -839,36 +839,35 @@ def api_importar_questoes():
     if not texto_extraido.strip():
         return jsonify({'erro': 'Não foi possível extrair texto do arquivo. Verifique se o PDF não é uma imagem escaneada.'}), 400
 
-    # Limita a 4000 caracteres para caber no timeout do servidor gratuito
-    texto_extraido = texto_extraido[:4000]
+    # Limita a 6000 caracteres
+    texto_extraido = texto_extraido[:6000]
     content_blocks = [{'type': 'text', 'text': f'Conteúdo do arquivo:\n\n{texto_extraido}'}]
 
     disc_hint    = f'\nDisciplina padrão: {disciplina}' if disciplina else ''
     assunto_hint = f'\nAssunto padrão: {assunto}' if assunto else ''
 
-    prompt = f"""Analise o documento fornecido e extraia TODAS as questões de prova presentes nele.{disc_hint}{assunto_hint}
+    prompt = f"""Extraia TODAS as questões de prova do texto abaixo.{disc_hint}{assunto_hint}
 
-Para cada questão identifique:
-- enunciado completo
-- alternativas (se houver)
-- gabarito/resposta correta (se indicado no documento)
-- tipo: multipla_escolha, verdadeiro_falso ou dissertativa
+REGRAS OBRIGATÓRIAS:
+- Inclua SEMPRE o enunciado completo de cada questão
+- Para questões de múltipla escolha: inclua TODAS as alternativas (A, B, C, D, E) com seus textos completos
+- Para verdadeiro/falso: alternativas = [{{"letra":"V","texto":"Verdadeiro"}},{{"letra":"F","texto":"Falso"}}]
+- Se o gabarito estiver indicado no texto, inclua-o; caso contrário use null
+- tipo deve ser exatamente: "multipla_escolha", "verdadeiro_falso" ou "dissertativa"
 
-Responda SOMENTE com JSON válido, sem texto extra, sem markdown:
+Responda SOMENTE com JSON válido (sem texto antes ou depois, sem markdown):
 {{
   "questoes": [
     {{
-      "enunciado": "texto da questão",
+      "enunciado": "texto completo da questão",
       "tipo": "multipla_escolha",
-      "alternativas": [{{"letra":"A","texto":"..."}},{{"letra":"B","texto":"..."}}],
+      "alternativas": [{{"letra":"A","texto":"texto completo"}},{{"letra":"B","texto":"texto completo"}},{{"letra":"C","texto":"texto completo"}},{{"letra":"D","texto":"texto completo"}}],
       "gabarito": "A",
       "disciplina": "{disciplina}",
       "assunto": "{assunto}"
     }}
   ]
 }}
-
-Se o gabarito não estiver no documento use null. Para dissertativa omita alternativas e gabarito."""
 
     content_blocks.append({'type': 'text', 'text': prompt})
 
