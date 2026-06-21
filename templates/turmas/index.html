@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Turmas{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h4 class="fw-bold mb-0"><i class="bi bi-people me-2"></i>Turmas & Alunos</h4>
+  <a href="{{ url_for('turma_nova') }}" class="btn btn-primary">
+    <i class="bi bi-plus-lg me-1"></i> Nova Turma
+  </a>
+</div>
+
+{% if turmas %}
+<div class="row g-3">
+  {% for turma in turmas %}
+  <div class="col-md-6 col-lg-4">
+    <div class="card h-100">
+      <div class="card-body">
+        <h6 class="fw-bold mb-0">{{ turma.nome }}</h6>
+        {% if turma.periodo %}<div class="text-muted small mb-2">{{ turma.periodo }}</div>{% endif %}
+        <div class="text-muted">
+          <i class="bi bi-person me-1"></i>{{ turma.alunos|length }} aluno(s)
+        </div>
+      </div>
+      <div class="card-footer bg-transparent d-flex gap-2">
+        <a href="{{ url_for('turma_detalhe', id=turma.id) }}" class="btn btn-sm btn-outline-primary flex-fill">
+          <i class="bi bi-eye"></i> Ver
+        </a>
+        <a href="{{ url_for('turma_editar', id=turma.id) }}" class="btn btn-sm btn-outline-secondary">
+          <i class="bi bi-pencil"></i>
+        </a>
+        <form method="post" action="{{ url_for('turma_excluir', id=turma.id) }}"
+              onsubmit="return confirm('Excluir turma {{ turma.nome }} e todos os seus alunos?')">
+          <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+        </form>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="card p-5 text-center text-muted">
+  <i class="bi bi-people" style="font-size:2.5rem;"></i>
+  <p class="mt-2 mb-0">Nenhuma turma cadastrada.<br>
+  <a href="{{ url_for('turma_nova') }}">Criar primeira turma</a></p>
+</div>
+{% endif %}
+{% endblock %}

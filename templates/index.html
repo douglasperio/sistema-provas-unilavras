@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% block title %}Início{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="mb-0 fw-bold">Dashboard</h4>
+    <small class="text-muted">Sistema de Provas com QR Code – Unilavras</small>
+  </div>
+</div>
+
+<!-- Cards de resumo -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="card text-center p-3 position-relative">
+      <div style="font-size:2rem; color:#1a2e4a;">{{ total_questoes }}</div>
+      <div class="text-muted small">Questões</div>
+      <a href="{{ url_for('banco_index') }}" class="stretched-link"></a>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card text-center p-3 position-relative">
+      <div style="font-size:2rem; color:#1a2e4a;">{{ total_provas }}</div>
+      <div class="text-muted small">Provas</div>
+      <a href="{{ url_for('provas_index') }}" class="stretched-link"></a>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card text-center p-3 position-relative">
+      <div style="font-size:2rem; color:#1a2e4a;">{{ total_turmas }}</div>
+      <div class="text-muted small">Turmas</div>
+      <a href="{{ url_for('turmas_index') }}" class="stretched-link"></a>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card text-center p-3 position-relative">
+      <div style="font-size:2rem; color:#1a2e4a;">{{ total_alunos }}</div>
+      <div class="text-muted small">Alunos</div>
+      <a href="{{ url_for('turmas_index') }}" class="stretched-link"></a>
+    </div>
+  </div>
+</div>
+
+<!-- Atalhos rápidos -->
+<div class="row g-3 mb-4">
+  <div class="col-md-4">
+    <a href="{{ url_for('banco_form') }}"
+       class="card text-decoration-none text-dark p-3 d-flex flex-row align-items-center gap-3 h-100">
+      <div style="font-size:1.8rem; color:#1a2e4a;"><i class="bi bi-plus-circle"></i></div>
+      <div>
+        <div class="fw-semibold">Nova Questão</div>
+        <div class="text-muted small">Adicionar ao banco</div>
+      </div>
+    </a>
+  </div>
+  <div class="col-md-4">
+    <a href="{{ url_for('prova_form') }}"
+       class="card text-decoration-none text-dark p-3 d-flex flex-row align-items-center gap-3 h-100">
+      <div style="font-size:1.8rem; color:#1a2e4a;"><i class="bi bi-file-earmark-plus"></i></div>
+      <div>
+        <div class="fw-semibold">Nova Prova</div>
+        <div class="text-muted small">Montar prova</div>
+      </div>
+    </a>
+  </div>
+</div>
+
+<!-- Aplicações recentes -->
+{% if aplicacoes_recentes %}
+<div class="card">
+  <div class="card-header">
+    <i class="bi bi-clock-history me-1"></i> Aplicações Recentes
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Prova</th>
+          <th>Turma</th>
+          <th>Data</th>
+          <th>Alunos</th>
+          <th>Corrigidos</th>
+          <th>Média</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for ap in aplicacoes_recentes %}
+        <tr>
+          <td>{{ ap.prova.titulo }}</td>
+          <td>{{ ap.turma.nome if ap.turma else '—' }}</td>
+          <td>{{ ap.data_aplicacao.strftime('%d/%m/%Y') }}</td>
+          <td>{{ ap.total_alunos }}</td>
+          <td>
+            <span class="badge {% if ap.total_corrigidos == ap.total_alunos and ap.total_alunos > 0 %}bg-success{% else %}bg-secondary{% endif %}">
+              {{ ap.total_corrigidos }}/{{ ap.total_alunos }}
+            </span>
+          </td>
+          <td>{{ '%.1f'|format(ap.media) if ap.media else '–' }}</td>
+          <td>
+            <a href="{{ url_for('resultados_aplicacao', id=ap.id) }}"
+               class="btn btn-sm btn-outline-secondary">
+              <i class="bi bi-eye"></i>
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="card p-4 text-center text-muted">
+  <i class="bi bi-inbox" style="font-size:2.5rem;"></i>
+  <p class="mt-2 mb-0">Nenhuma prova aplicada ainda.<br>
+  <a href="{{ url_for('prova_form') }}">Crie sua primeira prova</a> para começar.</p>
+</div>
+{% endif %}
+
+<!-- Modal: Corrigir pelo Celular -->
+{% include 'correcao/_modal_celular.html' %}
+
+{% endblock %}

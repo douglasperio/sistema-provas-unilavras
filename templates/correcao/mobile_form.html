@@ -1,0 +1,768 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>Correção – {{ aluno.nome if aluno else 'Aluno' }}</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f0f4ff;
+      -webkit-tap-highlight-color: transparent;
+      overscroll-behavior: none;
+    }
+
+    /* ── TOP BAR ── */
+    .top-bar {
+      background: #1a2e4a; color: #fff;
+      padding: .7rem 1rem;
+      display: flex; align-items: center; gap: .75rem;
+      position: sticky; top: 0; z-index: 200;
+    }
+    .top-bar a { color: #9eb5cc; font-size: 1.3rem; text-decoration: none; }
+    .top-bar .info { flex: 1; }
+    .top-bar .titulo { font-size: .95rem; font-weight: 700; line-height: 1.2; }
+    .top-bar .subtit { font-size: .72rem; color: #9eb5cc; }
+
+    /* ── PLACAR ── */
+    .placar {
+      background: #fff;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: .75rem 1.1rem;
+      border-bottom: 2px solid #f0f4ff;
+      position: sticky; top: 54px; z-index: 190;
+      box-shadow: 0 2px 8px rgba(0,0,0,.06);
+    }
+    .placar-nota {
+      font-size: 2.2rem; font-weight: 900; color: #1a2e4a; line-height: 1;
+      transition: color .3s;
+    }
+    .placar-nota.verde    { color: #16a34a; }
+    .placar-nota.amarelo  { color: #ca8a04; }
+    .placar-nota.vermelho { color: #dc2626; }
+    .placar-sub  { font-size: .75rem; color: #888; margin-top: .15rem; }
+    .placar-acertos .num { font-size: 1.2rem; font-weight: 700; color: #1a2e4a; }
+    .placar-acertos .leg { font-size: .72rem; color: #888; text-align: right; }
+
+    /* ── BARRA DE PROGRESSO ── */
+    .barra-prog { height: 4px; background: #e2e8f0; }
+    .barra-prog-fill {
+      height: 4px;
+      background: linear-gradient(to right, #2563eb, #16a34a);
+      transition: width .4s ease;
+    }
+
+    /* ── ENTRADA RÁPIDA ── */
+    .entrada-section {
+      background: #fff;
+      margin: .8rem .75rem .4rem;
+      border-radius: 16px;
+      box-shadow: 0 2px 10px rgba(0,0,0,.07);
+      padding: 1rem 1.1rem 1.1rem;
+    }
+    .entrada-label {
+      font-size: .8rem; font-weight: 700; color: #475569;
+      text-transform: uppercase; letter-spacing: .05em;
+      margin-bottom: .6rem;
+      display: flex; align-items: center; gap: .4rem;
+    }
+    .entrada-label i { color: #2563eb; font-size: 1rem; }
+    .entrada-wrap {
+      display: flex; align-items: center; gap: .5rem;
+    }
+    .entrada-input {
+      flex: 1;
+      font-size: 1.35rem; font-weight: 700; letter-spacing: .15em;
+      border: 2.5px solid #cbd5e1; border-radius: 12px;
+      padding: .65rem .9rem;
+      background: #f8fafc; color: #1a2e4a;
+      outline: none;
+      font-family: 'Courier New', monospace;
+      text-transform: uppercase;
+      caret-color: #2563eb;
+    }
+    .entrada-input:focus { border-color: #2563eb; background: #fff; }
+    .entrada-clear {
+      background: #f1f5f9; border: none; border-radius: 50%;
+      width: 38px; height: 38px; font-size: 1.1rem; color: #64748b;
+      cursor: pointer; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .entrada-clear:active { background: #e2e8f0; }
+    .entrada-progress {
+      font-size: .8rem; color: #64748b; margin-top: .5rem;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .entrada-progress .progbar {
+      height: 5px; background: #e2e8f0; border-radius: 5px;
+      flex: 1; margin: 0 .6rem; overflow: hidden;
+    }
+    .entrada-progress .progbar-fill {
+      height: 5px; background: #2563eb; border-radius: 5px;
+      transition: width .3s ease;
+    }
+
+    /* ── LISTA DE QUESTÕES ── */
+    .questoes-lista {
+      padding: 0 .75rem 7rem;
+    }
+    .q-row {
+      background: #fff;
+      border-radius: 10px;
+      padding: .55rem .9rem;
+      margin-bottom: .3rem;
+      display: flex; align-items: center; gap: .6rem;
+      border: 2px solid transparent;
+      transition: border-color .2s, background .2s;
+    }
+    .q-row.acertou  { border-color: #16a34a; background: #f0fdf4; }
+    .q-row.errou    { border-color: #dc2626; background: #fff5f5; }
+    .q-row.pendente { border-color: #e2e8f0; }
+
+    .q-num {
+      font-size: .82rem; font-weight: 700; color: #94a3b8;
+      min-width: 22px; text-align: right;
+    }
+    .q-letra-correta {
+      font-size: .78rem; color: #64748b;
+      background: #f1f5f9; border-radius: 6px;
+      padding: .15rem .45rem; font-weight: 600;
+    }
+    .q-seta { color: #cbd5e1; font-size: .9rem; }
+    .q-letra-aluno {
+      font-size: 1.1rem; font-weight: 900; min-width: 28px; text-align: center;
+      color: #94a3b8;
+    }
+    .q-row.acertou .q-letra-aluno { color: #16a34a; }
+    .q-row.errou   .q-letra-aluno { color: #dc2626; }
+
+    .q-status { font-size: 1.1rem; margin-left: auto; }
+    .q-row.acertou .q-status::before { content: '✓'; color: #16a34a; font-weight: 900; }
+    .q-row.errou   .q-status::before { content: '✗'; color: #dc2626; font-weight: 900; }
+
+    /* Dissertativa */
+    .q-diss-input {
+      flex: 1; border: 1.5px solid #cbd5e1; border-radius: 8px;
+      padding: .4rem .6rem; font-size: .95rem; text-align: center;
+      outline: none; background: #f8fafc;
+    }
+    .q-diss-input:focus { border-color: #2563eb; }
+
+    /* ── BOTÃO LER GRADE (destaque) ── */
+    .omr-card {
+      background: #7c3aed;
+      margin: .8rem .75rem .3rem;
+      border-radius: 16px;
+      padding: 1rem 1.25rem;
+      display: flex; align-items: center; gap: .9rem;
+      cursor: pointer; border: none; width: calc(100% - 1.5rem);
+      box-shadow: 0 4px 14px rgba(124,58,237,.40);
+      -webkit-tap-highlight-color: transparent;
+      transition: transform .1s, background .1s;
+      color: #fff; text-align: left;
+    }
+    .omr-card:active { transform: scale(.97); background: #6d28d9; }
+    .omr-card .omr-icon { font-size: 2rem; flex-shrink: 0; }
+    .omr-card .omr-txt  { line-height: 1.25; }
+    .omr-card .omr-title { font-size: 1rem; font-weight: 700; display: block; }
+    .omr-card .omr-sub  { font-size: .75rem; opacity: .85; }
+
+    .omr-msg {
+      font-size: .82rem; margin: 0 .75rem .4rem;
+      padding: .5rem .8rem; border-radius: 10px; display: none;
+    }
+    .omr-msg.ok  { background: #d1fae5; color: #065f46; display: block; }
+    .omr-msg.err { background: #fee2e2; color: #991b1b; display: block; }
+
+    /* ── OVERLAY DA CÂMERA AO VIVO ── */
+    #cameraOverlay {
+      display: none; position: fixed; inset: 0; z-index: 2000;
+      background: #000; flex-direction: column;
+    }
+    #cameraOverlay.ativo { display: flex; }
+    #omrVideo {
+      width: 100%; flex: 1; object-fit: cover;
+      min-height: 0;
+    }
+    #omrGuideCanvas {
+      position: absolute; top: 0; left: 0;
+      width: 100%; height: 100%;
+      pointer-events: none;
+    }
+    .cam-status {
+      position: absolute; top: 16px; left: 50%; transform: translateX(-50%);
+      background: rgba(0,0,0,.65); color: #fff;
+      padding: 6px 18px; border-radius: 20px;
+      font-size: .88rem; font-weight: 600; white-space: nowrap;
+      transition: background .3s;
+    }
+    .cam-status.ok { background: rgba(22,163,74,.85); }
+    .cam-bar {
+      background: rgba(0,0,0,.82); padding: .75rem 1rem;
+      display: flex; gap: .75rem; flex-shrink: 0;
+    }
+    .cam-bar button {
+      flex: 1; border: none; border-radius: 50px; padding: .85rem;
+      font-size: .97rem; font-weight: 700; cursor: pointer;
+    }
+    .cam-btn-cancel { background: #374151; color: #fff; }
+    .cam-btn-foto   { background: #fff;    color: #1a2e4a; }
+
+    /* ── BOTÃO SALVAR ── */
+    .btn-salvar {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: #fff; padding: .75rem 1rem;
+      box-shadow: 0 -4px 16px rgba(0,0,0,.1);
+      z-index: 300; display: flex; gap: .6rem;
+    }
+    .btn-salvar button {
+      flex: 1; border: none; border-radius: 50px;
+      padding: .85rem; font-size: 1rem; font-weight: 700;
+      cursor: pointer; transition: all .15s;
+    }
+    .btn-principal  { background: #16a34a; color: #fff; }
+    .btn-principal:active { background: #15803d; }
+    .btn-voltar {
+      background: #f1f5f9; color: #475569;
+      flex: 0 0 auto; padding: .85rem 1.2rem;
+    }
+    .btn-voltar:active { background: #e2e8f0; }
+  </style>
+</head>
+<body>
+
+<!-- Top bar -->
+<div class="top-bar">
+  <a href="/mobile/{{ aplicacao.id }}">
+    <i class="bi bi-arrow-left"></i>
+  </a>
+  <div class="info">
+    <div class="titulo">
+      {{ aluno.nome if aluno else '(cópia extra)' }}
+      {% if versao %}
+        <span style="background:#2563eb;color:#fff;border-radius:4px;padding:1px 6px;font-size:.72rem;margin-left:4px;">
+          Versão {{ versao.codigo }}
+        </span>
+      {% endif %}
+    </div>
+    <div class="subtit">{{ prova.titulo }} · {{ aplicacao.data_aplicacao.strftime('%d/%m/%Y') }}</div>
+  </div>
+</div>
+
+<!-- Placar em tempo real -->
+<div class="placar">
+  <div>
+    <div class="placar-nota" id="placarNota">—</div>
+    <div class="placar-sub">de {{ '%.1f'|format(prova.valor_total) }} pts</div>
+  </div>
+  <div class="placar-acertos">
+    <div class="num"><span id="numAcertos">0</span> / {{ qs_data|length }}</div>
+    <div class="leg">acertos</div>
+  </div>
+</div>
+
+<!-- Barra de progresso -->
+<div class="barra-prog">
+  <div class="barra-prog-fill" id="barraProgresso" style="width:0%"></div>
+</div>
+
+<form id="formCorrecao" method="post" action="/correcao/{{ resp_aluno.token }}">
+
+  <!-- ── CAMPO DE ENTRADA RÁPIDA (questões objetivas) ── -->
+  {% set tem_objetivas = qs_data|selectattr('tipo', 'ne', 'dissertativa')|list %}
+  {% if tem_objetivas %}
+  <!-- Input de câmera oculto (fallback quando getUserMedia não disponível) -->
+  <input type="file" id="omrInput" accept="image/*" capture="environment" style="display:none">
+
+  <!-- Botão Ler Grade (destaque, acima do campo de texto) -->
+  <button type="button" class="omr-card" onclick="abrirCamera()">
+    <span class="omr-icon"><i class="bi bi-camera"></i></span>
+    <span class="omr-txt">
+      <span class="omr-title">Ler Grade</span>
+      <span class="omr-sub">Fotografe a grade de respostas impressa na folha</span>
+    </span>
+  </button>
+  <div class="omr-msg" id="omrMsg"></div>
+
+  <div class="entrada-section">
+    <div class="entrada-label">
+      <i class="bi bi-keyboard"></i>
+      Digite as respostas do aluno em ordem
+    </div>
+    <div class="entrada-wrap">
+      <input type="text" id="entradaRapida"
+             class="entrada-input"
+             maxlength="{{ qs_data|length }}"
+             autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false"
+             placeholder="{{ '·' * (qs_data|selectattr('tipo','ne','dissertativa')|list|length) }}"
+             oninput="processarEntrada(this)">
+      <button type="button" class="entrada-clear" onclick="limparEntrada()" title="Limpar">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+    <div class="entrada-progress">
+      <span id="entradaContador">0 / {{ qs_data|selectattr('tipo','ne','dissertativa')|list|length }}</span>
+      <div class="progbar"><div class="progbar-fill" id="entradaProgBar" style="width:0%"></div></div>
+      <span style="font-size:.75rem; color:#94a3b8;">questões</span>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- ── LISTA DE QUESTÕES ── -->
+  <div class="questoes-lista">
+    {% for qd in qs_data %}
+    {% set qid = qd.questao_id|string %}
+    <div class="q-row pendente" id="qrow_{{ loop.index0 }}" data-idx="{{ loop.index0 }}" data-tipo="{{ qd.tipo }}">
+      <span class="q-num">{{ loop.index }}</span>
+
+      {% if qd.tipo == 'dissertativa' %}
+        <span class="q-letra-correta" style="background:#e0f2fe;color:#0369a1;">Dissertativa</span>
+        <input type="number" name="q_{{ qid }}" id="diss_{{ qid }}"
+               class="q-diss-input"
+               min="0" max="{{ qd.peso }}" step="0.1"
+               placeholder="0–{{ '%.1f'|format(qd.peso) }} pts"
+               oninput="recalcular()">
+        <span style="font-size:.75rem;color:#888;">pts</span>
+      {% else %}
+        {% if qd.gabarito %}
+        <span class="q-letra-correta">{{ qd.gabarito }}</span>
+        <span class="q-seta"><i class="bi bi-arrow-right"></i></span>
+        {% endif %}
+        <span class="q-letra-aluno" id="qletra_{{ loop.index0 }}">—</span>
+        <input type="hidden" name="q_{{ qid }}" id="hidden_{{ qid }}" value="">
+        <span class="q-status" id="qstatus_{{ loop.index0 }}"></span>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- ── Overlay câmera ao vivo ── -->
+  <div id="cameraOverlay">
+    <div style="position:relative; flex:1; min-height:0;">
+      <video id="omrVideo" autoplay playsinline muted></video>
+      <canvas id="omrGuideCanvas"></canvas>
+      <div class="cam-status" id="camStatus">Posicione o gabarito no quadro</div>
+    </div>
+    <div class="cam-bar">
+      <button class="cam-btn-cancel" onclick="fecharCamera()">✕ Cancelar</button>
+      <button class="cam-btn-foto"   onclick="capturarFotoManual()">📸 Capturar foto</button>
+    </div>
+  </div>
+
+  <!-- Botão salvar fixo -->
+  <div class="btn-salvar">
+    <button type="button" class="btn-voltar" onclick="window.location.href='/mobile/{{ aplicacao.id }}'">
+      <i class="bi bi-arrow-left"></i>
+    </button>
+    <button type="submit" class="btn-principal" id="btnSalvar">
+      <i class="bi bi-check-lg"></i>
+      {{ 'Atualizar Correção' if resp_aluno.corrigido else 'Salvar Correção' }}
+    </button>
+  </div>
+</form>
+
+<script>
+// ── Dados do servidor ──
+const GABARITO    = {{ gabarito_json|safe }};
+const RESPOSTAS   = {{ respostas_json|safe }};
+const QS_DATA     = {{ qs_data|tojson }};
+const TOTAL_PESO  = {{ prova.total_peso }};
+const VALOR_TOTAL = {{ prova.valor_total }};
+
+// Índices das questões objetivas (na ordem em que aparecem)
+const OBJS = QS_DATA.map((qd, i) => ({idx: i, qid: String(qd.questao_id), tipo: qd.tipo}))
+                    .filter(q => q.tipo !== 'dissertativa');
+const N_OBJS = OBJS.length;
+
+// ── Inicializa com respostas já salvas ──
+window.addEventListener('DOMContentLoaded', () => {
+  const campo = document.getElementById('entradaRapida');
+  let inicial = '';
+  OBJS.forEach(o => {
+    const letra = (RESPOSTAS[o.qid] || '').toUpperCase();
+    inicial += letra || ' ';
+  });
+  if (campo && inicial.trim()) {
+    campo.value = inicial.trimEnd();
+    processarEntrada(campo);
+  }
+  recalcular();
+});
+
+// ── Processar entrada rápida ──
+function processarEntrada(input) {
+  // Mantém apenas letras válidas (A-F, V, F) e espaços
+  let val = input.value.toUpperCase();
+  // Permite espaço como "não respondeu"
+  val = val.replace(/[^ABCDEFVF ]/g, '');
+  if (val.length > N_OBJS) val = val.substring(0, N_OBJS);
+  input.value = val;
+
+  // Atualiza cada questão objetiva
+  OBJS.forEach((o, i) => {
+    const letra = (val[i] || '').trim();
+    document.getElementById('hidden_' + o.qid).value = letra;
+    atualizarQRow(o.idx, o.qid, letra);
+  });
+
+  // Progresso
+  const respondidas = val.replace(/ /g, '').length;
+  const pct = N_OBJS > 0 ? (respondidas / N_OBJS * 100) : 0;
+  document.getElementById('entradaContador').textContent = respondidas + ' / ' + N_OBJS;
+  const pb = document.getElementById('entradaProgBar');
+  if (pb) pb.style.width = pct + '%';
+
+  recalcular();
+}
+
+// ── Atualiza visual de uma linha ──
+function atualizarQRow(idx, qid, letra) {
+  const row    = document.getElementById('qrow_' + idx);
+  const letraEl = document.getElementById('qletra_' + idx);
+  if (!row || !letraEl) return;
+
+  letraEl.textContent = letra || '—';
+  row.classList.remove('acertou', 'errou', 'pendente');
+
+  if (!letra) {
+    row.classList.add('pendente');
+    return;
+  }
+  const correto = (GABARITO[qid] || '').toUpperCase();
+  if (correto && letra === correto) {
+    row.classList.add('acertou');
+  } else if (correto) {
+    row.classList.add('errou');
+  } else {
+    row.classList.add('pendente');
+  }
+}
+
+// ── Limpar entrada ──
+function limparEntrada() {
+  const campo = document.getElementById('entradaRapida');
+  if (campo) { campo.value = ''; processarEntrada(campo); }
+}
+
+// ─── OMR SCANNER (câmera ao vivo – getUserMedia + fallback file input) ────────
+// Constantes que espelham o layout GradeOMR do PDF (em mm)
+const OMR_REG   = 8;
+const OMR_HDR   = 7;
+const OMR_ROW   = 7;
+const OMR_NUM_W = 9;
+
+const OMR_MAX_OPTS = OBJS.reduce((mx, o) => {
+  const qd = QS_DATA[o.idx];
+  if (qd.tipo === 'multipla_escolha') return Math.max(mx, (qd.alternativas||[]).length);
+  if (qd.tipo === 'verdadeiro_falso')  return Math.max(mx, 2);
+  return mx;
+}, 2);
+
+// ── Estado da câmera ──
+let _stream       = null;   // MediaStream ativo
+let _scanLoop     = null;   // setInterval handle
+let _confirmCount = 0;      // leituras consecutivas bem-sucedidas
+let _lastResult   = null;   // último resultado confirmado
+
+// ── Abre câmera nativa via input file (funciona em HTTP no celular) ──
+function abrirCamera() {
+  document.getElementById('omrInput').click();
+}
+
+// ── Para câmera e fecha overlay ──
+function fecharCamera() {
+  clearInterval(_scanLoop); _scanLoop = null;
+  if (_stream) { _stream.getTracks().forEach(t => t.stop()); _stream = null; }
+  const video = document.getElementById('omrVideo');
+  video.srcObject = null;
+  document.getElementById('cameraOverlay').classList.remove('ativo');
+  _confirmCount = 0; _lastResult = null;
+  const cnv = document.getElementById('omrGuideCanvas');
+  if (cnv) cnv.getContext('2d').clearRect(0, 0, cnv.width, cnv.height);
+}
+
+// ── Frame automático (loop a cada 400 ms) ──
+function _scanFrame() {
+  const video = document.getElementById('omrVideo');
+  if (!video.videoWidth) return;
+  const W = video.videoWidth, H = video.videoHeight;
+  const cnv = document.createElement('canvas');
+  cnv.width = W; cnv.height = H;
+  cnv.getContext('2d').drawImage(video, 0, 0, W, H);
+  const data = cnv.getContext('2d').getImageData(0, 0, W, H).data;
+
+  const result = omrDetectar(data, W, H);
+  const statusEl = document.getElementById('camStatus');
+  if (result) {
+    _confirmCount++;
+    _lastResult = result;
+    statusEl.className = 'cam-status ok';
+    statusEl.textContent = `✅ Grade detectada (${_confirmCount}/3)…`;
+    if (_confirmCount >= 3) {
+      aplicarResultadoOMR(result);
+      fecharCamera();
+    }
+  } else {
+    if (_confirmCount > 0) _confirmCount = 0;
+    statusEl.className = 'cam-status';
+    statusEl.textContent = 'Posicione a grade de respostas no quadro';
+  }
+}
+
+// ── Captura manual (botão 📸) ──
+function capturarFotoManual() {
+  const video = document.getElementById('omrVideo');
+  if (!video.videoWidth) { omrMsg('err', '❌ Câmera ainda não pronta. Aguarde.'); return; }
+  const W = video.videoWidth, H = video.videoHeight;
+  const cnv = document.createElement('canvas');
+  cnv.width = W; cnv.height = H;
+  cnv.getContext('2d').drawImage(video, 0, 0, W, H);
+  const data = cnv.getContext('2d').getImageData(0, 0, W, H).data;
+  const result = omrDetectar(data, W, H);
+  fecharCamera();
+  if (result) {
+    aplicarResultadoOMR(result);
+  } else {
+    omrMsg('err', '❌ Grade não detectada. Enquadre bem os 4 cantos e tente novamente.');
+  }
+}
+
+// ── Guia visual no canvas overlay ──
+function _desenharGuia() {
+  const canvas = document.getElementById('omrGuideCanvas');
+  canvas.width  = canvas.offsetWidth  || canvas.parentElement.offsetWidth;
+  canvas.height = canvas.offsetHeight || canvas.parentElement.offsetHeight;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  const pad = 0.07;
+  const rx = W * pad, ry = H * pad, rw = W * (1 - 2*pad), rh = H * (1 - 2*pad);
+  const cs = Math.min(rw, rh) * 0.10;
+  ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+  ctx.lineWidth = 3; ctx.lineCap = 'round';
+  const pts = [{x:rx,    y:ry,    dx:1,  dy:1},
+               {x:rx+rw, y:ry,    dx:-1, dy:1},
+               {x:rx,    y:ry+rh, dx:1,  dy:-1},
+               {x:rx+rw, y:ry+rh, dx:-1, dy:-1}];
+  for (const p of pts) {
+    ctx.beginPath();
+    ctx.moveTo(p.x + p.dx*cs, p.y);
+    ctx.lineTo(p.x, p.y);
+    ctx.lineTo(p.x, p.y + p.dy*cs);
+    ctx.stroke();
+  }
+  // Texto de instrução central suave
+  ctx.fillStyle = 'rgba(255,255,255,0.55)';
+  ctx.font = `${Math.round(W*0.035)}px sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.fillText('Enquadre a grade impressa', W/2, ry - 8);
+}
+
+// ── Fallback: input de arquivo ──
+document.getElementById('omrInput').addEventListener('change', function() {
+  const file = this.files[0];
+  if (!file) return;
+  this.value = '';
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      const MAX = 1800;
+      const scale = Math.min(1, MAX / Math.max(img.width, img.height));
+      const W = Math.round(img.width * scale);
+      const H = Math.round(img.height * scale);
+      const cnv = document.createElement('canvas');
+      cnv.width = W; cnv.height = H;
+      cnv.getContext('2d').drawImage(img, 0, 0, W, H);
+      const data = cnv.getContext('2d').getImageData(0, 0, W, H).data;
+      const result = omrDetectar(data, W, H);
+      if (result) {
+        aplicarResultadoOMR(result);
+      } else {
+        omrMsg('err', '❌ Grade não detectada. Certifique-se de fotografar apenas a grade impressa com boa iluminação.');
+      }
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+});
+
+// ── Mensagem de status ──
+function omrMsg(tipo, txt) {
+  const el = document.getElementById('omrMsg');
+  el.className = 'omr-msg ' + tipo;
+  el.textContent = txt;
+  if (tipo === 'ok') setTimeout(() => { el.style.display = 'none'; }, 5000);
+}
+
+// ── Algoritmo de detecção OMR pura ──
+// Retorna { respostas: [...] } se a grade for detectada, ou null caso contrário.
+function omrDetectar(data, W, H) {
+  const N = OBJS.length;
+  if (!N) return null;
+
+  // Limiar adaptativo baseado na luminância média
+  let sumLum = 0;
+  for (let i = 0; i < W * H; i++)
+    sumLum += data[i*4]*0.299 + data[i*4+1]*0.587 + data[i*4+2]*0.114;
+  const avgLum = sumLum / (W * H);
+  const thresh = Math.min(avgLum * 0.55, 120);
+
+  // Mapa binário: 1 = pixel escuro
+  const gray = new Uint8Array(W * H);
+  for (let i = 0; i < W * H; i++) {
+    const lum = data[i*4]*0.299 + data[i*4+1]*0.587 + data[i*4+2]*0.114;
+    gray[i] = lum < thresh ? 1 : 0;
+  }
+
+  // Detectar marcas de registro nos 4 cantos (blocos 8×8 mais densos)
+  const QW = Math.floor(W * 0.30), QH = Math.floor(H * 0.30);
+  const quads = [
+    {x1:0,    y1:0,    x2:QW,  y2:QH,  k:'tl'},
+    {x1:W-QW, y1:0,    x2:W,   y2:QH,  k:'tr'},
+    {x1:0,    y1:H-QH, x2:QW,  y2:H,   k:'bl'},
+    {x1:W-QW, y1:H-QH, x2:W,   y2:H,   k:'br'},
+  ];
+  const corners = {};
+  const BLKSZ = 8;
+  for (const q of quads) {
+    let bestScore = 0, bestBx = -1, bestBy = -1;
+    for (let by = q.y1; by < q.y2 - BLKSZ; by += BLKSZ)
+      for (let bx = q.x1; bx < q.x2 - BLKSZ; bx += BLKSZ) {
+        let dark = 0;
+        for (let dy = 0; dy < BLKSZ; dy++)
+          for (let dx = 0; dx < BLKSZ; dx++)
+            dark += gray[(by+dy)*W + (bx+dx)];
+        const score = dark / (BLKSZ * BLKSZ);
+        if (score > bestScore) { bestScore = score; bestBx = bx; bestBy = by; }
+      }
+    if (bestScore < 0.50) return null;   // canto não encontrado
+    const R = BLKSZ * 3;
+    const cx0 = Math.max(q.x1, bestBx - R), cy0 = Math.max(q.y1, bestBy - R);
+    const cx1 = Math.min(q.x2, bestBx + R + BLKSZ), cy1 = Math.min(q.y2, bestBy + R + BLKSZ);
+    let sx=0, sy=0, cnt=0;
+    for (let y=cy0; y<cy1; y++)
+      for (let x=cx0; x<cx1; x++)
+        if (gray[y*W+x]) { sx+=x; sy+=y; cnt++; }
+    corners[q.k] = {x: cnt>0?sx/cnt:bestBx+BLKSZ/2, y: cnt>0?sy/cnt:bestBy+BLKSZ/2};
+  }
+
+  const {tl, tr, bl, br} = corners;
+  const H_MM      = 2*OMR_REG + OMR_HDR + N*OMR_ROW;
+  const W_MM      = 182;   // A4 − 2×14 mm margens
+  const cell_w_mm = Math.max(1, (W_MM - 2*OMR_REG - OMR_NUM_W) / OMR_MAX_OPTS);
+
+  // Interpolação bilinear (u=horizontal 0-1, v=vertical 0-1) → pixel
+  function mapPt(u, v) {
+    return {
+      x: tl.x*(1-u)*(1-v) + tr.x*u*(1-v) + bl.x*(1-u)*v + br.x*u*v,
+      y: tl.y*(1-u)*(1-v) + tr.y*u*(1-v) + bl.y*(1-u)*v + br.y*u*v,
+    };
+  }
+  function vFrac(i) { return (OMR_REG/2 + OMR_HDR + (i+0.5)*OMR_ROW) / (H_MM - OMR_REG); }
+  function uFrac(i) { return (OMR_REG/2 + OMR_NUM_W + (i+0.5)*cell_w_mm) / (W_MM - OMR_REG); }
+
+  const vSpan = Math.hypot(bl.x-tl.x, bl.y-tl.y);
+  const cellR = Math.max(3, vSpan / (H_MM - OMR_REG) * OMR_ROW * 0.32);
+
+  function darkFrac(cx, cy) {
+    const r = Math.round(cellR);
+    let dark=0, tot=0;
+    for (let dy=-r; dy<=r; dy++)
+      for (let dx=-r; dx<=r; dx++) {
+        const x=Math.round(cx+dx), y=Math.round(cy+dy);
+        if (x>=0&&x<W&&y>=0&&y<H) { dark+=gray[y*W+x]; tot++; }
+      }
+    return tot>0 ? dark/tot : 0;
+  }
+
+  const respostas = [];
+  for (let qi = 0; qi < N; qi++) {
+    const v  = vFrac(qi);
+    const qd = QS_DATA[OBJS[qi].idx];
+    let n_opts;
+    if      (qd.tipo === 'multipla_escolha') n_opts = (qd.alternativas||[]).length;
+    else if (qd.tipo === 'verdadeiro_falso')  n_opts = 2;
+    else { respostas.push(' '); continue; }
+
+    const scores = [];
+    for (let oi = 0; oi < n_opts; oi++) {
+      const pt = mapPt(uFrac(oi), v);
+      scores.push(darkFrac(pt.x, pt.y));
+    }
+    const maxD        = Math.max(...scores);
+    const maxOpt      = scores.indexOf(maxD);
+    const outrasMedia = scores.filter((_,i)=>i!==maxOpt).reduce((a,b)=>a+b,0) / Math.max(1, n_opts-1);
+    const marcada     = maxD > 0.12 && (n_opts === 1 || maxD > outrasMedia * 1.8);
+
+    if (!marcada) {
+      respostas.push(' ');
+    } else if (qd.tipo === 'verdadeiro_falso') {
+      respostas.push(maxOpt === 0 ? 'V' : 'F');
+    } else {
+      const alts = qd.alternativas || [];
+      respostas.push(maxOpt < alts.length ? alts[maxOpt].letra : ' ');
+    }
+  }
+
+  // Só retorna resultado se pelo menos 1 resposta foi detectada
+  if (respostas.filter(l => l.trim()).length === 0) return null;
+  return { respostas };
+}
+
+// ── Aplica resultado no DOM ──
+function aplicarResultadoOMR(result) {
+  const campo = document.getElementById('entradaRapida');
+  campo.value = result.respostas.join('').trimEnd();
+  processarEntrada(campo);
+  const det = result.respostas.filter(l => l.trim()).length;
+  omrMsg('ok', `✅ ${det} de ${OBJS.length} respostas detectadas — confira e corrija se necessário`);
+}
+
+// ── Recalcular nota ──
+function recalcular() {
+  let pontos = 0;
+  let acertos = 0;
+  let respondidas = 0;
+
+  QS_DATA.forEach(qd => {
+    const qid  = String(qd.questao_id);
+    const row  = document.getElementById('qrow_' + QS_DATA.indexOf(qd));
+
+    if (qd.tipo === 'dissertativa') {
+      const inp = document.getElementById('diss_' + qid);
+      if (inp && inp.value !== '') {
+        const pts = Math.min(parseFloat(inp.value) || 0, qd.peso);
+        pontos += pts;
+        respondidas++;
+        if (pts === qd.peso) acertos++;
+      }
+      return;
+    }
+
+    const letra = document.getElementById('hidden_' + qid)?.value || '';
+    if (!letra) return;
+    respondidas++;
+    const correto = (GABARITO[qid] || '').toUpperCase();
+    if (correto && letra === correto) {
+      pontos += qd.peso;
+      acertos++;
+    }
+  });
+
+  const nota = TOTAL_PESO > 0 ? Math.round(pontos / TOTAL_PESO * VALOR_TOTAL * 100) / 100 : 0;
+
+  const notaEl = document.getElementById('placarNota');
+  notaEl.textContent = respondidas > 0 ? nota.toFixed(1) : '—';
+  notaEl.className = 'placar-nota' + (nota >= 7 ? ' verde' : nota >= 5 ? ' amarelo' : respondidas > 0 ? ' vermelho' : '');
+
+  document.getElementById('numAcertos').textContent = acertos;
+
+  const pct = QS_DATA.length > 0 ? (respondidas / QS_DATA.length * 100) : 0;
+  document.getElementById('barraProgresso').style.width = pct + '%';
+}
+</script>
+</body>
+</html>

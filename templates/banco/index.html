@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block title %}Banco de Questões{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4 class="fw-bold mb-0"><i class="bi bi-journal-text me-2"></i>Banco de Questões</h4>
+  <a href="{{ url_for('banco_form') }}" class="btn btn-primary">
+    <i class="bi bi-plus-lg me-1"></i> Nova Questão
+  </a>
+</div>
+
+<!-- Filtros -->
+<div class="card mb-3">
+  <div class="card-body py-2">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-md-3">
+        <input type="text" name="busca" class="form-control form-control-sm"
+               placeholder="Buscar no enunciado..." value="{{ busca }}">
+      </div>
+      <div class="col-md-3">
+        <input type="text" name="assunto" class="form-control form-control-sm"
+               placeholder="Filtrar por assunto..." value="{{ filtro_assunto }}"
+               list="listaAssuntosFilter">
+        <datalist id="listaAssuntosFilter">
+          {% for a in assuntos %}<option value="{{ a }}">{% endfor %}
+        </datalist>
+      </div>
+      <div class="col-md-2">
+        <select name="disciplina" class="form-select form-select-sm">
+          <option value="">Todas disciplinas</option>
+          {% for d in disciplinas %}
+          <option value="{{ d }}" {% if filtro_disciplina == d %}selected{% endif %}>{{ d }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <select name="tipo" class="form-select form-select-sm">
+          <option value="">Todos tipos</option>
+          <option value="multipla_escolha" {% if filtro_tipo == 'multipla_escolha' %}selected{% endif %}>Múltipla Escolha</option>
+          <option value="verdadeiro_falso"  {% if filtro_tipo == 'verdadeiro_falso'  %}selected{% endif %}>Verdadeiro/Falso</option>
+          <option value="dissertativa"      {% if filtro_tipo == 'dissertativa'      %}selected{% endif %}>Dissertativa</option>
+        </select>
+      </div>
+      <div class="col-md-2 d-flex gap-1">
+        <button type="submit" class="btn btn-primary btn-sm flex-fill">Filtrar</button>
+        <a href="{{ url_for('banco_index') }}" class="btn btn-outline-secondary btn-sm">✕</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% if questoes %}
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-hover mb-0">
+      <thead class="table-light">
+        <tr>
+          <th style="width:50%">Enunciado</th>
+          <th>Tipo</th>
+          <th>Disciplina / Assunto</th>
+          <th>Dificuldade</th>
+          <th>Gabarito</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for q in questoes %}
+        <tr>
+          <td>
+            <span title="{{ q.enunciado }}">
+              {{ q.enunciado[:100] }}{% if q.enunciado|length > 100 %}…{% endif %}
+            </span>
+          </td>
+          <td>
+            <span class="badge bg-light text-dark border">{{ q.tipo_label }}</span>
+          </td>
+          <td class="small">
+            <div>{{ q.disciplina or '–' }}</div>
+            {% if q.assunto %}<div class="text-muted" style="font-size:.75rem;">{{ q.assunto }}</div>{% endif %}
+          </td>
+          <td>
+            <span class="badge badge-{{ q.dificuldade }} small">{{ q.dificuldade_label }}</span>
+          </td>
+          <td>
+            {% if q.gabarito %}
+              <span class="badge bg-success">{{ q.gabarito }}</span>
+            {% else %}
+              <span class="text-muted">—</span>
+            {% endif %}
+          </td>
+          <td class="text-end">
+            <div class="d-flex gap-1 justify-content-end">
+              <a href="{{ url_for('banco_form', id=q.id) }}" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-pencil"></i>
+              </a>
+              <form method="post" action="{{ url_for('banco_excluir', id=q.id) }}"
+                    onsubmit="return confirm('Excluir esta questão?')">
+                <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="card-footer text-muted small">{{ questoes|length }} questão(ões) encontrada(s)</div>
+</div>
+{% else %}
+<div class="card p-5 text-center text-muted">
+  <i class="bi bi-journal-x" style="font-size:2.5rem;"></i>
+  <p class="mt-2 mb-0">
+    {% if busca or filtro_disciplina or filtro_tipo %}
+      Nenhuma questão encontrada com os filtros aplicados.
+    {% else %}
+      Banco vazio. <a href="{{ url_for('banco_form') }}">Adicione a primeira questão.</a>
+    {% endif %}
+  </p>
+</div>
+{% endif %}
+{% endblock %}

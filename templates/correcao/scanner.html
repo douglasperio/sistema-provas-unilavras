@@ -1,0 +1,208 @@
+{% extends "base.html" %}
+{% block title %}Scanner QR – Correção{% endblock %}
+
+{% block head %}
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<style>
+  /* ── Oculta sidebar no celular para usar a tela toda ── */
+  @media (max-width: 768px) {
+    .sidebar      { display: none !important; }
+    .main-content { margin-left: 0 !important; padding: .75rem !important; }
+  }
+
+  #reader {
+    width: 100%;
+    max-width: 500px;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 3px solid #1a2e4a;
+  }
+
+  #status-box {
+    max-width: 500px;
+    text-align: center;
+    padding: .75rem 1rem;
+    border-radius: 8px;
+    margin: .6rem auto 0;
+    font-weight: 600;
+    font-size: .95rem;
+  }
+  .s-aguardando { background:#f0f4ff; color:#1a2e4a; border:1px solid #c8d8f0; }
+  .s-lendo      { background:#fff8e1; color:#7c5f00; border:1px solid #ffe082; }
+  .s-ok         { background:#e8f5e9; color:#1b5e20; border:1px solid #a5d6a7; }
+  .s-erro       { background:#fdecea; color:#7b1a1a; border:1px solid #f5c6c6; }
+
+  #btnIniciar {
+    font-size: 1.15rem;
+    padding: .75rem 2rem;
+    border-radius: 50px;
+    font-weight: 700;
+  }
+  #btnParar {
+    font-size: 1rem;
+    padding: .6rem 1.6rem;
+    border-radius: 50px;
+  }
+
+  .leitura-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: .4rem .6rem;
+    border-radius: 6px;
+    background: #f8f9fa;
+    margin-bottom: .3rem;
+    font-size: .85rem;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Cabeçalho compacto -->
+<div class="d-flex align-items-center gap-2 mb-3">
+  <a href="{{ url_for('resultados_index') }}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left"></i>
+  </a>
+  <div>
+    <h5 class="fw-bold mb-0"><i class="bi bi-qr-code-scan me-1"></i>Escaner de QR Code</h5>
+    <small class="text-muted">Aponte a câmera para o QR Code na folha do aluno</small>
+  </div>
+</div>
+
+<!-- Scanner centralizado -->
+<div class="d-flex flex-column align-items-center">
+
+  <!-- Correção automática por foto -->
+  <a href="{{ url_for('correcao_foto') }}" class="btn btn-success btn-lg w-100 mb-3"
+     style="max-width:500px;">
+    <i class="bi bi-camera-fill me-1"></i>
+    Correção automática por foto (lê o gabarito sozinho)
+  </a>
+
+  <div id="reader"></div>
+
+  <div id="status-box" class="s-aguardando" style="display:none;"></div>
+
+  <div class="mt-3 d-flex gap-2 justify-content-center">
+    <button id="btnIniciar" class="btn btn-primary" onclick="iniciarScanner()">
+      <i class="bi bi-camera-video me-1"></i> Iniciar Câmera
+    </button>
+    <button id="btnParar" class="btn btn-outline-secondary d-none" onclick="pararScanner()">
+      <i class="bi bi-stop-circle me-1"></i> Parar
+    </button>
+  </div>
+
+  <!-- Entrada manual -->
+  <div class="mt-4 w-100" style="max-width:500px;">
+    <div class="card p-3">
+      <div class="small fw-semibold text-muted mb-2">
+        <i class="bi bi-keyboard me-1"></i> Ou insira o token manualmente
+      </div>
+      <form id="formManual" class="d-flex gap-2">
+        <input type="text" id="tokenManual" class="form-control"
+               placeholder="Cole o token aqui..." autocomplete="off">
+        <button type="submit" class="btn btn-primary px-3">
+          <i class="bi bi-arrow-right"></i>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Histórico de leituras -->
+  <div class="mt-3 w-100" style="max-width:500px;">
+    <div class="small fw-semibold text-muted mb-2">
+      <i class="bi bi-clock-history me-1"></i> Leituras desta sessão
+    </div>
+    <div id="listaLeituras">
+      <div class="text-muted small text-center py-2">Nenhuma leitura ainda.</div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script>
+  let scanner    = null;
+  let ultimoToken = null;
+  const leituras  = [];
+
+  function mostrarStatus(msg, tipo) {
+    const box = document.getElementById('status-box');
+    box.className = 'status-box ' + tipo;
+    box.innerHTML = msg;
+    box.style.display = 'block';
+  }
+
+  function iniciarScanner() {
+    document.getElementById('btnIniciar').classList.add('d-none');
+    document.getElementById('btnParar').classList.remove('d-none');
+    mostrarStatus('<i class="bi bi-hourglass-split me-1"></i> Iniciando câmera…', 's-lendo');
+
+    scanner = new Html5Qrcode('reader');
+    scanner.start(
+      { facingMode: 'environment' },
+      { fps: 12, qrbox: { width: 260, height: 260 } },
+      onScanSuccess,
+      () => {}   // silencia erros contínuos
+    ).then(() => {
+      mostrarStatus('<i class="bi bi-camera-video me-1"></i> Aponte para o QR Code do aluno', 's-aguardando');
+    }).catch(err => {
+      mostrarStatus('<i class="bi bi-exclamation-triangle me-1"></i> Câmera indisponível: ' + err, 's-erro');
+      resetarBotoes();
+    });
+  }
+
+  function pararScanner() {
+    if (scanner) scanner.stop().then(() => { scanner.clear(); scanner = null; });
+    resetarBotoes();
+    mostrarStatus('<i class="bi bi-stop-circle me-1"></i> Câmera parada.', 's-aguardando');
+  }
+
+  function resetarBotoes() {
+    document.getElementById('btnIniciar').classList.remove('d-none');
+    document.getElementById('btnParar').classList.add('d-none');
+  }
+
+  function onScanSuccess(token) {
+    token = token.trim();
+    if (token === ultimoToken) return;
+    ultimoToken = token;
+
+    mostrarStatus('<i class="bi bi-check-circle me-1"></i> QR lido! Abrindo correção…', 's-ok');
+    adicionarLeitura(token);
+
+    // Vibrar se disponível (feedback tátil no celular)
+    if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+
+    setTimeout(() => {
+      window.location.href = '/correcao/' + encodeURIComponent(token);
+    }, 500);
+  }
+
+  function adicionarLeitura(token) {
+    leituras.unshift({ token, hora: new Date().toLocaleTimeString('pt-BR') });
+    const div = document.getElementById('listaLeituras');
+    div.innerHTML = leituras.slice(0, 8).map(l =>
+      `<div class="leitura-item">
+        <a href="/correcao/${l.token}" class="text-truncate me-2" style="max-width:240px;">
+          <i class="bi bi-person-check me-1 text-success"></i>${l.token.substring(0,12)}…
+        </a>
+        <span class="text-muted">${l.hora}</span>
+      </div>`
+    ).join('');
+  }
+
+  document.getElementById('formManual').addEventListener('submit', e => {
+    e.preventDefault();
+    const token = document.getElementById('tokenManual').value.trim();
+    if (token) window.location.href = '/correcao/' + encodeURIComponent(token);
+  });
+
+  // Auto-iniciar no celular (tela pequena)
+  if (window.innerWidth < 768) {
+    setTimeout(iniciarScanner, 400);
+  }
+</script>
+{% endblock %}

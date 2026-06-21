@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Correção pelo Celular – Sistema de Provas</title>
+  <style>
+    body { font-family: -apple-system, 'Segoe UI', Arial, sans-serif; background: #f5f7fa;
+           display: flex; flex-direction: column; align-items: center;
+           min-height: 100vh; margin: 0; padding: 30px 20px; box-sizing: border-box; }
+    h1 { font-size: 22px; margin-bottom: 4px; text-align: center; color: #1a2e4a; }
+    .sub { color: #6b7f99; font-size: 14px; margin-bottom: 28px; text-align: center; }
+
+    .card { background: #fff; border-radius: 16px; padding: 28px 32px; text-align: center;
+            box-shadow: 0 2px 12px rgba(0,0,0,.1); max-width: 380px; width: 100%; }
+    .card h2 { font-size: 16px; color: #1a2e4a; margin-bottom: 16px; }
+    .card img { width: 240px; height: 240px; }
+    .instrucao { color: #6b7f99; font-size: 13px; margin-top: 12px; line-height: 1.5; }
+
+    .url-box { margin-top: 12px; background: #f0f4f8; border-radius: 8px;
+               padding: 10px 14px; font-size: 13px; word-break: break-all;
+               color: #2e86c1; font-weight: 600; }
+
+    .voltar { margin-top: 24px; color: #2e86c1; font-size: 14px; text-decoration: none; }
+    .voltar:hover { text-decoration: underline; }
+
+    .erro { background: #fde2e2; border-radius: 14px; padding: 24px; text-align: center; max-width: 400px; color: #7b2020; }
+    .erro h2 { margin-bottom: 8px; }
+    .erro p { font-size: 14px; line-height: 1.5; margin: 6px 0; }
+  </style>
+</head>
+<body>
+
+{% if url_ngrok %}
+  <h1>📱 Correção pelo Celular</h1>
+  <p class="sub">Aponte a câmera do celular para o QR Code abaixo</p>
+
+  <div class="card">
+    <h2>Escaneie para abrir no celular</h2>
+    <img src="https://api.qrserver.com/v1/create-qr-code/?size=240x240&data={{ url_ngrok }}/mobile" alt="QR Code">
+    <p class="instrucao">O celular abrirá direto na tela de correção por foto.<br>Funciona em qualquer rede (WiFi ou dados móveis).</p>
+    <div class="url-box">{{ url_ngrok }}/mobile</div>
+  </div>
+
+  <a class="voltar" href="{{ url_for('index') }}">← Voltar ao sistema</a>
+
+{% else %}
+  <div class="erro">
+    <h2>⚠️ Internet não ativa</h2>
+    <p>O túnel de internet (ngrok) não está rodando.</p>
+    <p>Feche o sistema e abra usando o arquivo <strong>iniciar_internet.bat</strong> para ativar o acesso pelo celular.</p>
+  </div>
+{% endif %}
+
+</body>
+</html>

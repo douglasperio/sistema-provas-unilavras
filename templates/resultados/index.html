@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Resultados{% endblock %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h4 class="fw-bold mb-0"><i class="bi bi-bar-chart me-2"></i>Resultados</h4>
+  <!-- Botão Corrigir pelo Celular -->
+  <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalCelular">
+    <i class="bi bi-phone me-1"></i> Corrigir pelo Celular
+  </button>
+</div>
+
+{% if aplicacoes %}
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-hover mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Prova</th>
+          <th>Turma</th>
+          <th>Data</th>
+          <th>Alunos</th>
+          <th>Corrigidos</th>
+          <th>Média</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for ap in aplicacoes %}
+        <tr>
+          <td class="fw-semibold">{{ ap.prova.titulo }}</td>
+          <td>
+            {{ ap.turma.nome if ap.turma else '—' }}
+            {% if ap.turma and ap.turma.periodo %}
+            <span class="text-muted small">– {{ ap.turma.periodo }}</span>
+            {% endif %}
+          </td>
+          <td>{{ ap.data_aplicacao.strftime('%d/%m/%Y') }}</td>
+          <td>{{ ap.total_alunos }}</td>
+          <td>
+            <span class="badge {% if ap.total_corrigidos == ap.total_alunos and ap.total_alunos > 0 %}bg-success{% else %}bg-secondary{% endif %}">
+              {{ ap.total_corrigidos }}/{{ ap.total_alunos }}
+            </span>
+          </td>
+          <td>
+            {% if ap.media is not none %}
+            <span class="fw-bold {% if ap.media >= 7 %}text-success{% elif ap.media >= 5 %}text-warning{% else %}text-danger{% endif %}">
+              {{ '%.1f'|format(ap.media) }}
+            </span>
+            {% else %}–{% endif %}
+          </td>
+          <td>
+            <a href="{{ url_for('resultados_aplicacao', id=ap.id) }}"
+               class="btn btn-sm btn-outline-primary">
+              <i class="bi bi-eye"></i> Ver
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="card p-5 text-center text-muted">
+  <i class="bi bi-bar-chart" style="font-size:2.5rem;"></i>
+  <p class="mt-2 mb-0">Nenhuma prova aplicada ainda.</p>
+</div>
+{% endif %}
+
+<!-- ── Modal: Corrigir pelo Celular ── -->
+{% include 'correcao/_modal_celular.html' %}
+
+{% endblock %}

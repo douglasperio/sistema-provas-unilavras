@@ -1,0 +1,80 @@
+<!-- Modal: Corrigir pelo Celular -->
+<div class="modal fade" id="modalCelular" tabindex="-1" aria-labelledby="modalCelularLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title fw-bold" id="modalCelularLabel">
+          <i class="bi bi-phone me-2 text-primary"></i>Corrigir pelo Celular
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body text-center px-4 pb-4">
+
+        <p class="text-muted small mb-3">
+          Escaneie com a <strong>câmera nativa do Android</strong> (não precisa de app).<br>
+          Celular e computador devem estar na <strong>mesma rede Wi-Fi</strong>.
+        </p>
+
+        <!-- QR Code grande -->
+        <div class="d-inline-block p-3 border rounded-3 bg-white shadow-sm mb-3">
+          <img src="data:image/png;base64,{{ mobile_qr }}"
+               width="220" height="220"
+               style="image-rendering:pixelated; display:block;"
+               alt="QR Code acesso celular">
+        </div>
+
+        <!-- URL para copiar -->
+        <div class="input-group input-group-sm mb-4">
+          <input type="text" class="form-control text-center"
+                 id="urlCelular" value="{{ mobile_url }}" readonly>
+          <button class="btn btn-outline-secondary" type="button"
+                  onclick="copiarUrl()" title="Copiar link">
+            <i class="bi bi-clipboard" id="iconCopy"></i>
+          </button>
+        </div>
+
+        <!-- Passos -->
+        <div class="text-start border rounded-3 p-3 bg-light">
+          <div class="fw-semibold small mb-2">Como usar:</div>
+          <div class="d-flex flex-column gap-2 small text-muted">
+            <div class="d-flex gap-2 align-items-start">
+              <span class="badge bg-primary rounded-circle flex-shrink-0" style="min-width:20px; line-height:20px;">1</span>
+              Abra a <strong>câmera nativa</strong> do Android e aponte para este QR Code.
+            </div>
+            <div class="d-flex gap-2 align-items-start">
+              <span class="badge bg-primary rounded-circle flex-shrink-0" style="min-width:20px; line-height:20px;">2</span>
+              Toque na notificação que aparecer — o navegador abrirá a lista de provas.
+            </div>
+            <div class="d-flex gap-2 align-items-start">
+              <span class="badge bg-primary rounded-circle flex-shrink-0" style="min-width:20px; line-height:20px;">3</span>
+              Escolha a prova → toque no nome do aluno → marque as respostas → salve.
+            </div>
+            <div class="d-flex gap-2 align-items-start">
+              <span class="badge bg-success rounded-circle flex-shrink-0" style="min-width:20px; line-height:20px;">4</span>
+              A nota é calculada automaticamente. Volte e corrija o próximo aluno.
+            </div>
+          </div>
+          <div class="alert alert-warning py-2 px-3 mt-3 mb-0 small">
+            <i class="bi bi-info-circle me-1"></i>
+            <strong>Dica:</strong> Para identificar um aluno pelo QR Code impresso na folha,
+            use também a câmera nativa — ela vai abrir direto a tela de correção daquele aluno.
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function copiarUrl() {
+  const el  = document.getElementById('urlCelular');
+  const ico = document.getElementById('iconCopy');
+  navigator.clipboard.writeText(el.value).then(() => {
+    ico.className = 'bi bi-clipboard-check text-success';
+    setTimeout(() => { ico.className = 'bi bi-clipboard'; }, 2000);
+  });
+}
+</script>

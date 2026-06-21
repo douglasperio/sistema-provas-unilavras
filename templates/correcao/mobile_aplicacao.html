@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>{{ aplicacao.prova.titulo }} – Correção</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <style>
+    body { background: #f0f4ff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+    .top-bar {
+      background: #1a2e4a; color: #fff;
+      padding: .85rem 1rem;
+      display: flex; align-items: center; gap: .75rem;
+      position: sticky; top: 0; z-index: 100;
+    }
+    .top-bar .titulo  { font-size: 1rem; font-weight: 700; margin: 0; line-height: 1.2; }
+    .top-bar .subtit  { font-size: .73rem; color: #9eb5cc; }
+    .secao-label {
+      font-size: .72rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .08em; color: #6c757d;
+      padding: .9rem 1rem .3rem;
+    }
+    .aluno-btn {
+      background: #fff;
+      border-radius: 12px;
+      padding: .95rem 1.1rem;
+      margin: .4rem .85rem;
+      box-shadow: 0 1px 5px rgba(0,0,0,.07);
+      text-decoration: none; color: #1a2e4a;
+      display: flex; align-items: center; gap: .85rem;
+      -webkit-tap-highlight-color: transparent;
+      transition: transform .1s;
+      border: 2px solid transparent;
+    }
+    .aluno-btn:active { transform: scale(.97); }
+    .aluno-btn.pendente  { border-color: #f39c12; }
+    .aluno-btn.corrigido { opacity: .7; border-color: #2ecc71; }
+    .avatar {
+      width: 44px; height: 44px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 1.1rem; flex-shrink: 0;
+    }
+    .avatar.pend { background: #fff3cd; color: #856404; }
+    .avatar.ok   { background: #d1f5e0; color: #1a7a3c; }
+    .nome  { font-weight: 600; font-size: .97rem; line-height: 1.2; }
+    .matr  { font-size: .78rem; color: #888; }
+    .nota  { font-size: 1.05rem; font-weight: 700; margin-left: auto; flex-shrink: 0; }
+    .nota.verde    { color: #1a7a3c; }
+    .nota.amarelo  { color: #856404; }
+    .nota.vermelho { color: #9b1c1c; }
+    .seta { color: #ccc; font-size: 1.1rem; margin-left: .3rem; flex-shrink: 0; }
+    .resumo-bar {
+      background: #1a2e4a; color: #fff;
+      display: flex; justify-content: space-around;
+      padding: .6rem 1rem; font-size: .85rem;
+    }
+    .resumo-bar .num { font-size: 1.2rem; font-weight: 700; display: block; }
+    .empty { text-align: center; color: #aaa; padding: 2rem 1rem; font-size: .9rem; }
+    .search-wrap { padding: .6rem .85rem .2rem; }
+    .search-wrap input {
+      border-radius: 25px; border: 1.5px solid #dee2e6;
+      padding: .5rem 1rem; font-size: .9rem; width: 100%; outline: none;
+    }
+    .search-wrap input:focus { border-color: #1a2e4a; }
+
+  </style>
+</head>
+<body>
+
+<!-- Input de câmera oculto -->
+<!-- Top bar -->
+<div class="top-bar">
+  <a href="/mobile" style="color:#9eb5cc; font-size:1.3rem;">
+    <i class="bi bi-arrow-left"></i>
+  </a>
+  <div class="flex-fill">
+    <div class="titulo">{{ aplicacao.prova.titulo }}</div>
+    <div class="subtit">
+      {{ aplicacao.turma.nome if aplicacao.turma else '—' }}
+      · {{ aplicacao.data_aplicacao.strftime('%d/%m/%Y') }}
+    </div>
+  </div>
+</div>
+
+<!-- Barra de resumo -->
+<div class="resumo-bar">
+  <div class="text-center">
+    <span class="num">{{ pendentes|length }}</span>
+    Pendentes
+  </div>
+  <div class="text-center">
+    <span class="num">{{ corrigidos|length }}</span>
+    Corrigidos
+  </div>
+  <div class="text-center">
+    {% if aplicacao.media is not none %}
+      <span class="num">{{ '%.1f'|format(aplicacao.media) }}</span>
+    {% else %}
+      <span class="num">—</span>
+    {% endif %}
+    Média
+  </div>
+</div>
+
+<!-- Busca rápida -->
+<div class="search-wrap">
+  <input type="text" id="busca" placeholder="🔍  Busque o aluno pelo nome..." oninput="filtrar()">
+</div>
+
+<!-- Pendentes -->
+{% if pendentes %}
+<div class="secao-label">⏳  Pendentes ({{ pendentes|length }})</div>
+{% for resp in pendentes %}
+<a href="/correcao/{{ resp.token }}" class="aluno-btn pendente" data-nome="{{ resp.aluno.nome|lower if resp.aluno else '' }}">
+  <div class="avatar pend">
+    {{ (resp.aluno.nome[0] | upper) if resp.aluno else '?' }}
+  </div>
+  <div class="flex-fill">
+    <div class="nome">{{ resp.aluno.nome if resp.aluno else '(cópia extra)' }}</div>
+    <div class="matr">
+      {% if resp.aluno and resp.aluno.matricula %}{{ resp.aluno.matricula }}{% endif %}
+      {% if resp.versao %} · Versão {{ resp.versao.codigo }}{% endif %}
+    </div>
+  </div>
+  <span class="seta"><i class="bi bi-chevron-right"></i></span>
+</a>
+{% endfor %}
+{% endif %}
+
+<!-- Corrigidos -->
+{% if corrigidos %}
+<div class="secao-label">✅  Corrigidos ({{ corrigidos|length }})</div>
+{% for resp in corrigidos %}
+<a href="/correcao/{{ resp.token }}" class="aluno-btn corrigido" data-nome="{{ resp.aluno.nome|lower if resp.aluno else '' }}">
+  <div class="avatar ok">
+    {{ (resp.aluno.nome[0] | upper) if resp.aluno else '?' }}
+  </div>
+  <div class="flex-fill">
+    <div class="nome">{{ resp.aluno.nome if resp.aluno else '(cópia extra)' }}</div>
+    <div class="matr">
+      {% if resp.aluno and resp.aluno.matricula %}{{ resp.aluno.matricula }}{% endif %}
+      {% if resp.versao %} · Versão {{ resp.versao.codigo }}{% endif %}
+    </div>
+  </div>
+  {% if resp.nota_final is not none %}
+  <span class="nota {% if resp.nota_final >= 7 %}verde{% elif resp.nota_final >= 5 %}amarelo{% else %}vermelho{% endif %}">
+    {{ '%.1f'|format(resp.nota_final) }}
+  </span>
+  {% endif %}
+  <span class="seta"><i class="bi bi-pencil"></i></span>
+</a>
+{% endfor %}
+{% endif %}
+
+{% if not pendentes and not corrigidos %}
+<div class="empty">Nenhum aluno nesta aplicação.</div>
+{% endif %}
+
+<div style="height:2rem;"></div>
+
+<!-- Toast de sucesso -->
+<div id="toast" style="
+  display:none; position:fixed; bottom:1.5rem; left:50%; transform:translateX(-50%);
+  background:#16a34a; color:#fff; padding:.75rem 1.4rem; border-radius:50px;
+  font-size:.9rem; font-weight:700; z-index:999;
+  box-shadow:0 4px 16px rgba(0,0,0,.25); white-space:nowrap;">
+  <i class="bi bi-check-circle-fill me-1"></i>
+  <span id="toast-msg"></span>
+</div>
+
+<script>
+// ── Toast de sucesso após correção ──
+(function() {
+  const params = new URLSearchParams(window.location.search);
+  const msg = params.get('toast');
+  if (msg) {
+    const el = document.getElementById('toast');
+    document.getElementById('toast-msg').textContent = decodeURIComponent(msg);
+    el.style.display = 'block';
+    setTimeout(() => { el.style.opacity='0'; el.style.transition='opacity .5s'; }, 2800);
+    setTimeout(() => { el.style.display='none'; }, 3300);
+    history.replaceState({}, '', window.location.pathname);
+  }
+})();
+
+// ── Busca de aluno ──
+function filtrar() {
+  const q = document.getElementById('busca').value.toLowerCase().trim();
+  document.querySelectorAll('.aluno-btn').forEach(btn => {
+    btn.style.display = (!q || (btn.dataset.nome||'').includes(q)) ? '' : 'none';
+  });
+}
+
+</script>
+</body>
+</html>

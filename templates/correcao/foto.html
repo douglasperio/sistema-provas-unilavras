@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Correção por Foto</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+      background: #0e1726; color: #eef2f7; min-height: 100vh;
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+    header {
+      background: #1B4F72; padding: 14px 16px;
+      padding-top: calc(14px + env(safe-area-inset-top));
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    header h1 { font-size: 17px; }
+    header a { color: #bcd6ea; text-decoration: none; font-size: 14px; }
+    main { padding: 18px 16px 30px; max-width: 520px; margin: 0 auto; }
+
+    .card { background: #19243a; border-radius: 14px; padding: 18px; margin-bottom: 14px; }
+    .hint { font-size: 13.5px; color: #9fb0c7; line-height: 1.55; }
+    .hint li { margin: 4px 0 4px 18px; }
+    .secao { font-size: 13px; color: #9fb0c7; font-weight: 700;
+             text-transform: uppercase; letter-spacing: .05em; margin: 16px 2px 8px; }
+
+    .item {
+      display: flex; align-items: center; justify-content: space-between;
+      background: #19243a; border-radius: 12px; padding: 14px 16px;
+      margin-bottom: 8px; text-decoration: none; color: #eef2f7;
+    }
+    .item:active { background: #223150; }
+    .item .tit { font-weight: 700; font-size: 15.5px; }
+    .item .sub { font-size: 12.5px; color: #9fb0c7; margin-top: 2px; }
+    .item .seta { color: #5a6f8f; font-size: 20px; }
+    .item.corrigido { opacity: .65; }
+    .badge-nota {
+      background: #1e3a2b; color: #58d68d; border-radius: 16px;
+      padding: 3px 10px; font-size: 13px; font-weight: 700;
+    }
+
+    .aluno-sel {
+      background: #15314b; border: 1px solid #2e86c1; border-radius: 12px;
+      padding: 12px 14px; margin-bottom: 14px;
+    }
+    .aluno-sel .nome { font-weight: 800; font-size: 17px; }
+    .aluno-sel .sub { font-size: 12.5px; color: #9fb0c7; margin-top: 2px; }
+
+    .btn {
+      display: block; width: 100%; border: none; border-radius: 12px;
+      padding: 16px; font-size: 17px; font-weight: 700; cursor: pointer;
+      text-align: center; margin-top: 14px; text-decoration: none; color: #fff;
+    }
+    .btn-primary { background: #2e86c1; }
+    input[type=file] { display: none; }
+
+    #spinner { display: none; text-align: center; padding: 30px 0; }
+    .loader {
+      width: 44px; height: 44px; border-radius: 50%;
+      border: 5px solid #2e86c1; border-top-color: transparent;
+      margin: 0 auto 12px; animation: spin .9s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    #resultado { display: none; }
+    .nota-box { text-align: center; padding: 10px 0 16px; }
+    .nota-box .nota { font-size: 52px; font-weight: 800; color: #58d68d; }
+    .nota-box .sub { font-size: 14px; color: #9fb0c7; margin-top: 2px; }
+    .aluno-nome { font-size: 18px; font-weight: 700; text-align: center; }
+    .prova-titulo { font-size: 13px; color: #9fb0c7; text-align: center; margin-bottom: 8px; }
+    .aviso-diss {
+      background: #5a4a1e; border-radius: 10px; padding: 10px 12px;
+      font-size: 13px; margin: 10px 0; line-height: 1.45;
+    }
+
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    td, th { padding: 6px 4px; text-align: center; border-bottom: 1px solid #243450; }
+    .ok { color: #58d68d; font-weight: 700; }
+    .err { color: #ec7063; font-weight: 700; }
+    .blank { color: #f5b041; font-weight: 700; }
+    .diss { color: #9fb0c7; font-style: italic; }
+
+    #erro {
+      display: none; background: #5c2b2b; border-radius: 12px;
+      padding: 14px; font-size: 14.5px; line-height: 1.5; margin-bottom: 14px;
+    }
+    #debugImg { width: 100%; border-radius: 10px; margin-top: 10px; display: none; }
+    .toggle-debug {
+      background: none; border: none; color: #7fb3d8; font-size: 13px;
+      margin-top: 10px; cursor: pointer; text-decoration: underline;
+    }
+    .empty { text-align: center; color: #5a6f8f; padding: 20px 0; font-size: 14px; }
+  </style>
+</head>
+<body>
+<header>
+  <h1>📷 Correção por Foto</h1>
+  {% if aluno %}
+    <a href="{{ url_for('correcao_foto', aplicacao_id=aplicacao.id) }}">← Alunos</a>
+  {% elif aplicacao %}
+    <a href="{{ url_for('correcao_foto') }}">← Provas</a>
+  {% else %}
+    <a href="{{ url_for('mobile_index') }}">← Início</a>
+  {% endif %}
+</header>
+
+<main>
+
+{# ───────── ETAPA 1: escolher aplicação ───────── #}
+{% if not aplicacao %}
+  <div class="secao">1. Escolha a prova aplicada</div>
+  {% if aplicacoes %}
+    {% for ap in aplicacoes %}
+    <a class="item" href="{{ url_for('correcao_foto', aplicacao_id=ap.id) }}">
+      <div>
+        <div class="tit">{{ ap.prova.titulo }}</div>
+        <div class="sub">
+          {{ ap.turma.nome if ap.turma else '—' }} ·
+          {{ ap.data_aplicacao.strftime('%d/%m/%Y') }} ·
+          {{ ap.total_corrigidos }}/{{ ap.total_alunos }} corrigidas
+        </div>
+      </div>
+      <span class="seta">›</span>
+    </a>
+    {% endfor %}
+  {% else %}
+    <div class="empty">Nenhuma prova aplicada ainda.</div>
+  {% endif %}
+
+{# ───────── ETAPA 2: escolher aluno ───────── #}
+{% elif not aluno %}
+  <div class="card" style="padding:12px 16px;">
+    <div class="tit" style="font-weight:800;">{{ aplicacao.prova.titulo }}</div>
+    <div class="hint">{{ aplicacao.turma.nome if aplicacao.turma else '' }} ·
+      {{ aplicacao.data_aplicacao.strftime('%d/%m/%Y') }}</div>
+  </div>
+
+  <div class="secao">2. Escolha o aluno (a prova de quem você vai fotografar)</div>
+  {% for r in pendentes %}
+  <a class="item" href="{{ url_for('correcao_foto', aplicacao_id=aplicacao.id, aluno_id=r.aluno.id) }}">
+    <div class="tit">{{ r.aluno.nome }}</div>
+    <span class="seta">📸</span>
+  </a>
+  {% endfor %}
+  {% if not pendentes %}<div class="empty">Todos os alunos já foram corrigidos. 🎉</div>{% endif %}
+
+  {% if corrigidos %}
+  <div class="secao">Já corrigidos (toque para corrigir de novo)</div>
+  {% for r in corrigidos %}
+  <a class="item corrigido" href="{{ url_for('correcao_foto', aplicacao_id=aplicacao.id, aluno_id=r.aluno.id) }}">
+    <div class="tit">{{ r.aluno.nome }}</div>
+    <span class="badge-nota">{{ '%.1f'|format(r.nota_final) }}</span>
+  </a>
+  {% endfor %}
+  {% endif %}
+
+{# ───────── ETAPA 3: fotografar ───────── #}
+{% else %}
+  <div id="erro"></div>
+
+  <div class="aluno-sel">
+    <div class="nome">👤 {{ aluno.nome }}</div>
+    <div class="sub">{{ aplicacao.prova.titulo }} ·
+      {{ aplicacao.data_aplicacao.strftime('%d/%m/%Y') }}</div>
+  </div>
+
+  <div class="card" id="instrucoes">
+    <ul class="hint">
+      <li>Fotografe a <strong>página do GABARITO</strong> da prova deste aluno (a da grade de quadradinhos)</li>
+      <li>As <strong>4 marcas pretas dos cantos</strong> da grade devem aparecer</li>
+      <li>Folha plana, boa luz, sem sombras</li>
+    </ul>
+    <button class="btn btn-primary" onclick="document.getElementById('foto').click()">
+      📸 Fotografar gabarito
+    </button>
+    <input type="file" id="foto" accept="image/*" capture="environment">
+  </div>
+
+  <div id="spinner">
+    <div class="loader"></div>
+    <div class="hint" style="text-align:center;">Lendo o gabarito…</div>
+  </div>
+
+  <div id="resultado">
+    <div class="card">
+      <div class="aluno-nome" id="rAluno"></div>
+      <div class="prova-titulo" id="rProva"></div>
+      <div class="nota-box">
+        <div class="nota" id="rNota"></div>
+        <div class="sub" id="rAcertos"></div>
+      </div>
+      <div class="aviso-diss" id="rDiss" style="display:none;">
+        ✍️ Esta prova tem questão dissertativa — a nota acima considera só as
+        objetivas. Lance a dissertativa pela correção manual.
+      </div>
+      <table>
+        <thead><tr><th>Questão</th><th>Marcada</th><th>Gabarito</th><th></th></tr></thead>
+        <tbody id="rTabela"></tbody>
+      </table>
+      <button class="toggle-debug" onclick="toggleDebug()">Ver onde o sistema leu os quadradinhos</button>
+      <img id="debugImg" alt="leitura">
+      <a class="btn btn-primary" href="{{ url_for('correcao_foto', aplicacao_id=aplicacao.id) }}">
+        ➡️ Próximo aluno
+      </a>
+    </div>
+  </div>
+
+<script>
+const inp = document.getElementById('foto');
+const erroBox = document.getElementById('erro');
+
+inp.addEventListener('change', async () => {
+  if (!inp.files.length) return;
+  mostrar('spinner');
+  erroBox.style.display = 'none';
+
+  const fd = new FormData();
+  fd.append('foto', inp.files[0]);
+  fd.append('aluno_id', '{{ aluno.id }}');
+  fd.append('aplicacao_id', '{{ aplicacao.id }}');
+  try {
+    const r = await fetch('/api/corrigir-foto', { method: 'POST', body: fd });
+    const j = await r.json();
+    if (!r.ok || !j.ok) throw new Error(j.erro || 'Falha ao processar.');
+    exibirResultado(j);
+  } catch (e) {
+    mostrar('instrucoes');
+    erroBox.textContent = '⚠️ ' + e.message;
+    erroBox.style.display = 'block';
+  }
+  inp.value = '';
+});
+
+function mostrar(id) {
+  for (const s of ['instrucoes', 'spinner', 'resultado'])
+    document.getElementById(s).style.display = (s === id) ? 'block' : 'none';
+}
+
+function exibirResultado(j) {
+  document.getElementById('rAluno').textContent = j.aluno;
+  document.getElementById('rProva').textContent =
+    j.prova + (j.versao ? ' — Versão ' + j.versao : '');
+  document.getElementById('rNota').textContent =
+    j.nota.toLocaleString('pt-BR', { minimumFractionDigits: 1 });
+  document.getElementById('rAcertos').textContent =
+    j.acertos + ' acerto(s) nas objetivas (valor da prova: ' + j.valor_total + ')';
+  document.getElementById('rDiss').style.display = j.tem_dissertativa ? 'block' : 'none';
+
+  const tb = document.getElementById('rTabela');
+  tb.innerHTML = '';
+  for (const d of j.detalhes) {
+    let marc = d.marcada || '—', gab = d.gabarito || '—', status, cls;
+    if (d.tipo === 'dissertativa') { status = 'dissertativa'; cls = 'diss'; marc = '—'; }
+    else if (!d.marcada) { status = 'EM BRANCO'; cls = 'blank'; }
+    else if (d.correta) { status = '✓'; cls = 'ok'; }
+    else { status = '✗'; cls = 'err'; }
+    tb.insertAdjacentHTML('beforeend',
+      `<tr><td>${d.numero}</td><td>${marc}</td><td>${gab}</td><td class="${cls}">${status}</td></tr>`);
+  }
+
+  const img = document.getElementById('debugImg');
+  if (j.debug_jpeg_b64) img.src = 'data:image/jpeg;base64,' + j.debug_jpeg_b64;
+  img.style.display = 'none';
+  mostrar('resultado');
+}
+
+function toggleDebug() {
+  const img = document.getElementById('debugImg');
+  img.style.display = (img.style.display === 'none') ? 'block' : 'none';
+}
+</script>
+{% endif %}
+
+</main>
+</body>
+</html>

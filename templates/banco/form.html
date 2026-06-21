@@ -1,0 +1,335 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Editar Questão' if questao else 'Nova Questão' }}{% endblock %}
+
+{% block head %}
+<style>
+  .ia-spinner { display:none; }
+  .alt-input-row { display:flex; gap:.5rem; align-items:center; margin-bottom:.4rem; }
+  .alt-input-row .input-group-text { font-weight:700; min-width:32px; text-align:center; }
+  #secaoIA { border:2px dashed #2563eb; border-radius:10px; padding:1rem; background:#f0f4ff; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center gap-2 mb-4">
+  <a href="{{ url_for('banco_index') }}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left"></i>
+  </a>
+  <h4 class="fw-bold mb-0">{{ 'Editar Questão' if questao else 'Nova Questão' }}</h4>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-8">
+    <div class="card">
+      <div class="card-body">
+        <form method="post" id="formQuestao">
+
+          <!-- Linha 1: tipo, curso, disciplina -->
+          <div class="row g-3 mb-3">
+            <div class="col-md-3">
+              <label class="form-label fw-semibold">Tipo</label>
+              <select name="tipo" id="tipoSelect" class="form-select" required>
+                <option value="">Selecione...</option>
+                <option value="multipla_escolha" {% if questao and questao.tipo=='multipla_escolha' %}selected{% endif %}>Múltipla Escolha</option>
+                <option value="verdadeiro_falso"  {% if questao and questao.tipo=='verdadeiro_falso'  %}selected{% endif %}>Verdadeiro/Falso</option>
+                <option value="dissertativa"      {% if questao and questao.tipo=='dissertativa'      %}selected{% endif %}>Dissertativa</option>
+              </select>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label fw-semibold">Curso</label>
+              <input type="text" name="curso_ia" id="inpCurso" class="form-control"
+                     placeholder="Ex: Odontologia" list="listaCursos">
+              <datalist id="listaCursos">
+                <option value="Odontologia">
+                <option value="Medicina">
+                <option value="Enfermagem">
+                <option value="Farmácia">
+                <option value="Fisioterapia">
+                <option value="Nutrição">
+                <option value="Biomedicina">
+              </datalist>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label fw-semibold">Disciplina</label>
+              <input type="text" name="disciplina" id="inpDisciplina" class="form-control"
+                     value="{{ questao.disciplina if questao else '' }}"
+                     placeholder="Ex: Periodontia" list="listaDisciplinas">
+              <datalist id="listaDisciplinas">
+                {% for d in disciplinas %}<option value="{{ d }}">{% endfor %}
+              </datalist>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label fw-semibold">Assunto <span class="text-danger">*</span></label>
+              <input type="text" name="assunto" id="inpAssunto" class="form-control" required
+                     value="{{ questao.assunto if questao else '' }}"
+                     placeholder="Ex: Periodontite Estágio II" list="listaAssuntos">
+              <datalist id="listaAssuntos">
+                {% for a in assuntos %}<option value="{{ a }}">{% endfor %}
+              </datalist>
+            </div>
+          </div>
+
+          <!-- Linha 2: dificuldade + núm. alternativas (só MC) -->
+          <div class="row g-3 mb-3">
+            <div class="col-md-3">
+              <label class="form-label fw-semibold">Dificuldade</label>
+              <select name="dificuldade" class="form-select">
+                <option value="facil"   {% if questao and questao.dificuldade=='facil'   %}selected{% endif %}>Fácil</option>
+                <option value="medio"   {% if not questao or questao.dificuldade=='medio' %}selected{% endif %}>Médio</option>
+                <option value="dificil" {% if questao and questao.dificuldade=='dificil' %}selected{% endif %}>Difícil</option>
+              </select>
+            </div>
+            <div class="col-md-3" id="rowNumAlts" style="display:none;">
+              <label class="form-label fw-semibold">Número de Alternativas</label>
+              <select name="num_alternativas" id="numAlternativas" class="form-select">
+                <option value="3">3 alternativas</option>
+                <option value="4" selected>4 alternativas</option>
+                <option value="5">5 alternativas</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Enunciado -->
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Enunciado</label>
+            <textarea name="enunciado" id="inpEnunciado" class="form-control" rows="5" required
+                      placeholder="Digite ou gere com IA...">{{ questao.enunciado if questao else '' }}</textarea>
+          </div>
+
+          <!-- Alternativas (MC) -->
+          <div id="secaoMultipla" style="display:none;">
+            <label class="form-label fw-semibold">Alternativas</label>
+            {% set alts = questao.alternativas if questao else [] %}
+            {% for letra in ['A','B','C','D','E'] %}
+            {% set texto = namespace(val='') %}
+            {% for a in alts %}{% if a.letra == letra %}{% set texto.val = a.texto %}{% endif %}{% endfor %}
+            <div class="alt-input-row alt-row" data-letra="{{ letra }}">
+              <span class="input-group-text bg-white border">{{ letra }}</span>
+              <input type="text" name="alt_{{ letra }}" id="alt{{ letra }}"
+                     class="form-control" value="{{ texto.val }}"
+                     placeholder="Alternativa {{ letra }}">
+            </div>
+            {% endfor %}
+            <div class="mt-2 mb-3">
+              <label class="form-label fw-semibold">Gabarito (Resposta Correta)</label>
+              <select name="gabarito" id="gabaritoMultipla" class="form-select" style="max-width:200px;">
+                <option value="">Selecione...</option>
+                {% for letra in ['A','B','C','D','E'] %}
+                <option value="{{ letra }}"
+                  {% if questao and questao.gabarito == letra %}selected{% endif %}>{{ letra }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+
+          <!-- Gabarito V/F -->
+          <div id="secaoVF" style="display:none;" class="mb-3">
+            <label class="form-label fw-semibold">Gabarito</label>
+            <div class="d-flex gap-3">
+              <div class="form-check">
+                <input class="form-check-input" type="radio" name="gabarito" value="V" id="gabV"
+                  {% if questao and questao.gabarito=='V' %}checked{% endif %}>
+                <label class="form-check-label" for="gabV">Verdadeiro</label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input" type="radio" name="gabarito" value="F" id="gabF"
+                  {% if questao and questao.gabarito=='F' %}checked{% endif %}>
+                <label class="form-check-label" for="gabF">Falso</label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Dissertativa info -->
+          <div id="secaoDissertativa" class="mb-3 alert alert-info" style="display:none;">
+            <i class="bi bi-info-circle me-1"></i>
+            Questões dissertativas não têm gabarito automático. A nota é atribuída manualmente.
+          </div>
+
+          <div class="d-flex gap-2 mt-3">
+            <button type="submit" class="btn btn-primary">
+              <i class="bi bi-check-lg me-1"></i> Salvar Questão
+            </button>
+            <a href="{{ url_for('banco_index') }}" class="btn btn-outline-secondary">Cancelar</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Painel IA -->
+  <div class="col-lg-4">
+    <div id="secaoIA">
+      <div class="fw-bold mb-2 text-primary">
+        <i class="bi bi-stars me-1"></i> Gerar com Inteligência Artificial
+      </div>
+      <div class="text-muted small mb-3">
+        Preencha Tipo, Disciplina, Assunto e Dificuldade, depois clique em Gerar.
+        Você poderá editar o resultado antes de salvar.
+      </div>
+
+      <!-- Material de referência -->
+      <div class="mb-2">
+        <label class="form-label small fw-semibold mb-1">
+          <i class="bi bi-paperclip me-1"></i>Material de referência
+          <span class="text-muted fw-normal">(opcional)</span>
+        </label>
+        <input type="file" id="arquivoReferencia" class="form-control form-control-sm"
+               accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.txt">
+        <div class="form-text mt-1">
+          PDF, imagem (JPG/PNG) ou TXT que a IA usará como base para elaborar a questão.
+        </div>
+        <div id="arquivoNome" class="text-success small mt-1 d-none">
+          <i class="bi bi-check-circle me-1"></i><span></span>
+        </div>
+      </div>
+
+      <!-- Instrução complementar -->
+      <div class="mb-3">
+        <label class="form-label small fw-semibold mb-1">
+          <i class="bi bi-chat-left-text me-1"></i>Instrução complementar
+          <span class="text-muted fw-normal">(opcional)</span>
+        </label>
+        <textarea id="infoComplementar" class="form-control form-control-sm" rows="2"
+                  placeholder="Ex: em forma de caso clínico, com foco em diagnóstico diferencial, relacione com imagem radiográfica..."></textarea>
+      </div>
+
+      <button type="button" class="btn btn-primary w-100" id="btnGerarIA">
+        <span class="ia-normal"><i class="bi bi-stars me-1"></i> Gerar Questão com IA</span>
+        <span class="ia-spinner d-none">
+          <span class="spinner-border spinner-border-sm me-1"></span> Gerando...
+        </span>
+      </button>
+      <div id="iaErro" class="alert alert-danger mt-2 d-none small"></div>
+      <div id="iaExplicacao" class="alert alert-success mt-2 d-none small"></div>
+    </div>
+
+    {% if questao %}
+    <div class="card mt-3 p-3">
+      <div class="small text-muted">
+        <div><b>Criada em:</b> {{ questao.criado_em.strftime('%d/%m/%Y %H:%M') }}</div>
+        <div><b>Tipo:</b> {{ questao.tipo_label }}</div>
+        {% if questao.assunto %}<div><b>Assunto:</b> {{ questao.assunto }}</div>{% endif %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const tipoSelect   = document.getElementById('tipoSelect');
+  const secoes = {
+    multipla_escolha: document.getElementById('secaoMultipla'),
+    verdadeiro_falso: document.getElementById('secaoVF'),
+    dissertativa:     document.getElementById('secaoDissertativa'),
+  };
+  const rowNumAlts = document.getElementById('rowNumAlts');
+  const numAlts    = document.getElementById('numAlternativas');
+
+  function atualizarSecoes() {
+    const tipo = tipoSelect.value;
+    Object.entries(secoes).forEach(([k, el]) => {
+      el.style.display = k === tipo ? '' : 'none';
+    });
+    // rowNumAlts agora é um col dentro do row — usar visibility para não quebrar o layout
+    rowNumAlts.style.visibility = tipo === 'multipla_escolha' ? 'visible' : 'hidden';
+    atualizarVisibilidadeAlts();
+  }
+
+  function atualizarVisibilidadeAlts() {
+    const n = parseInt(numAlts.value || 4);
+    document.querySelectorAll('.alt-row').forEach(row => {
+      const letra = row.dataset.letra;
+      const idx   = 'ABCDE'.indexOf(letra);
+      row.style.display = idx < n ? '' : 'none';
+    });
+  }
+
+  tipoSelect.addEventListener('change', atualizarSecoes);
+  numAlts.addEventListener('change', atualizarVisibilidadeAlts);
+  atualizarSecoes();
+
+  // ── Mostrar nome do arquivo selecionado ──
+  document.getElementById('arquivoReferencia').addEventListener('change', function() {
+    const nomeDiv  = document.getElementById('arquivoNome');
+    const nomeSpan = nomeDiv.querySelector('span');
+    if (this.files && this.files[0]) {
+      nomeSpan.textContent = this.files[0].name;
+      nomeDiv.classList.remove('d-none');
+    } else {
+      nomeDiv.classList.add('d-none');
+    }
+  });
+
+  // ── Geração com IA ──
+  document.getElementById('btnGerarIA').addEventListener('click', async () => {
+    const tipo             = tipoSelect.value;
+    const curso            = document.getElementById('inpCurso').value.trim();
+    const assunto          = document.getElementById('inpAssunto').value.trim();
+    const disciplina       = document.getElementById('inpDisciplina').value.trim();
+    const dificuldade      = document.querySelector('[name=dificuldade]').value;
+    const num_alt          = parseInt(numAlts.value || 4);
+    const infoComplementar = document.getElementById('infoComplementar').value.trim();
+    const arquivoInput     = document.getElementById('arquivoReferencia');
+    const erroDiv          = document.getElementById('iaErro');
+    const explDiv          = document.getElementById('iaExplicacao');
+
+    erroDiv.classList.add('d-none');
+    explDiv.classList.add('d-none');
+
+    if (!tipo)    { erroDiv.textContent='Selecione o tipo.'; erroDiv.classList.remove('d-none'); return; }
+    if (!assunto) { erroDiv.textContent='Informe o assunto.'; erroDiv.classList.remove('d-none'); return; }
+
+    document.querySelector('.ia-normal').classList.add('d-none');
+    document.querySelector('.ia-spinner').classList.remove('d-none');
+    document.getElementById('btnGerarIA').disabled = true;
+
+    try {
+      // Usar FormData para suportar upload de arquivo
+      const fd = new FormData();
+      fd.append('tipo',             tipo);
+      fd.append('curso',            curso || 'Odontologia');
+      fd.append('assunto',          assunto);
+      fd.append('disciplina',       disciplina);
+      fd.append('dificuldade',      dificuldade);
+      fd.append('num_alternativas', num_alt);
+      if (infoComplementar) fd.append('info_complementar', infoComplementar);
+      if (arquivoInput.files[0])   fd.append('arquivo_referencia', arquivoInput.files[0]);
+
+      const res = await fetch('/banco/gerar-ia', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (data.erro) throw new Error(data.erro);
+
+      // Preencher enunciado
+      document.getElementById('inpEnunciado').value = data.enunciado || '';
+
+      // Preencher alternativas
+      if (data.alternativas && data.alternativas.length) {
+        data.alternativas.forEach(alt => {
+          const el = document.getElementById('alt' + alt.letra);
+          if (el) el.value = alt.texto;
+        });
+        if (data.gabarito) {
+          const gabSelect = document.getElementById('gabaritoMultipla');
+          if (gabSelect) gabSelect.value = data.gabarito;
+          const radio = document.querySelector(`[name=gabarito][value="${data.gabarito}"]`);
+          if (radio) radio.checked = true;
+        }
+      }
+
+      if (data.explicacao) {
+        explDiv.innerHTML = '<i class="bi bi-lightbulb me-1"></i><b>Gabarito:</b> ' + data.explicacao;
+        explDiv.classList.remove('d-none');
+      }
+    } catch(e) {
+      erroDiv.textContent = e.message;
+      erroDiv.classList.remove('d-none');
+    } finally {
+      document.querySelector('.ia-normal').classList.remove('d-none');
+      document.querySelector('.ia-spinner').classList.add('d-none');
+      document.getElementById('btnGerarIA').disabled = false;
+    }
+  });
+</script>
+{% endblock %}

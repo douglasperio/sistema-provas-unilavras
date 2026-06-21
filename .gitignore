@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+*.pyo
+instance/
+*.db
+config.json
+cert.pem
+key.pem
+*.zip
+*.xlsx
+ngrok.exe
+cloudflared.exe
+iniciar_internet.bat
+iniciar_oculto.vbs
+debug_*.jpg

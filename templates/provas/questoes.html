@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block title %}Questões – {{ prova.titulo }}{% endblock %}
+{% block content %}
+<div class="d-flex align-items-center gap-2 mb-1">
+  <a href="{{ url_for('provas_index') }}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left"></i>
+  </a>
+  <h4 class="fw-bold mb-0">{{ prova.titulo }}</h4>
+</div>
+<p class="text-muted mb-4 ms-5">Monte as questões desta prova</p>
+
+<div class="row g-3">
+  <!-- Questões na prova -->
+  <div class="col-md-7">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-list-check me-1"></i> Questões da Prova</span>
+        <span class="badge bg-secondary">{{ prova.itens|length }} questão(ões) · {{ '%.1f'|format(prova.total_peso) }} pts (peso)</span>
+      </div>
+
+      {% if prova.itens %}
+      <div class="list-group list-group-flush">
+        {% for item in prova.itens %}
+        <div class="list-group-item">
+          <div class="d-flex align-items-start gap-2">
+            <span class="badge bg-secondary mt-1">{{ loop.index }}</span>
+            <div class="flex-fill">
+              <div class="fw-semibold small">
+                {{ item.questao.enunciado[:120] }}{% if item.questao.enunciado|length > 120 %}…{% endif %}
+              </div>
+              <div class="d-flex gap-2 mt-1 align-items-center flex-wrap">
+                <span class="badge bg-light text-dark border small">{{ item.questao.tipo_label }}</span>
+                {% if item.questao.disciplina %}
+                <span class="text-muted" style="font-size:.75rem;">{{ item.questao.disciplina }}</span>
+                {% endif %}
+                <!-- Peso editável -->
+                <form method="post" class="d-flex align-items-center gap-1" style="margin-left:auto;">
+                  <input type="hidden" name="action" value="update_peso">
+                  <input type="hidden" name="pq_id" value="{{ item.id }}">
+                  <label class="form-label mb-0 small text-muted">Peso:</label>
+                  <input type="number" name="peso" value="{{ item.peso }}" min="0.5" step="0.5"
+                         class="form-control form-control-sm" style="width:70px;"
+                         onchange="this.form.submit()">
+                </form>
+              </div>
+            </div>
+            <!-- Remover -->
+            <form method="post">
+              <input type="hidden" name="action" value="remove">
+              <input type="hidden" name="pq_id" value="{{ item.id }}">
+              <button class="btn btn-sm btn-outline-danger" title="Remover">
+                <i class="bi bi-x-lg"></i>
+              </button>
+            </form>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="card-body text-center text-muted">
+        <i class="bi bi-inbox"></i> Nenhuma questão adicionada ainda.
+      </div>
+      {% endif %}
+
+      {% if prova.itens %}
+      <div class="card-footer d-flex gap-2">
+        <a href="{{ url_for('prova_aplicar', id=prova.id) }}" class="btn btn-success">
+          <i class="bi bi-send me-1"></i> Gerar Prova
+        </a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Adicionar questões -->
+  <div class="col-md-5">
+    <div class="card">
+      <div class="card-header"><i class="bi bi-plus-circle me-1"></i> Adicionar do Banco</div>
+      <div class="card-body p-2" style="max-height:520px; overflow-y:auto;">
+        {% if disponiveis %}
+        {% set disciplina_atual = namespace(val='') %}
+        {% for q in disponiveis %}
+          {% if q.disciplina != disciplina_atual.val %}
+            {% set disciplina_atual.val = q.disciplina %}
+            {% if q.disciplina %}
+            <div class="text-muted small fw-semibold px-2 pt-2">{{ q.disciplina }}</div>
+            {% endif %}
+          {% endif %}
+          <form method="post" class="mb-1">
+            <input type="hidden" name="action" value="add">
+            <input type="hidden" name="questao_id" value="{{ q.id }}">
+            <div class="border rounded p-2 d-flex justify-content-between align-items-start gap-2"
+                 style="font-size:.85rem;">
+              <div>
+                <div>{{ q.enunciado[:80] }}{% if q.enunciado|length > 80 %}…{% endif %}</div>
+                <div class="d-flex gap-1 mt-1">
+                  <span class="badge bg-light text-dark border" style="font-size:.7rem;">{{ q.tipo_label }}</span>
+                  <span class="badge badge-{{ q.dificuldade }}" style="font-size:.7rem;">{{ q.dificuldade_label }}</span>
+                </div>
+              </div>
+              <div class="d-flex flex-column align-items-end gap-1" style="min-width:80px;">
+                <input type="number" name="peso" value="1" min="0.5" step="0.5"
+                       class="form-control form-control-sm" style="width:65px;" title="Peso">
+                <button type="submit" class="btn btn-sm btn-primary" style="font-size:.75rem;">
+                  <i class="bi bi-plus-lg"></i> Add
+                </button>
+              </div>
+            </div>
+          </form>
+        {% endfor %}
+        {% else %}
+        <div class="text-center text-muted p-3 small">
+          Todas as questões do banco já foram adicionadas.
+          <br><a href="{{ url_for('banco_form') }}">Criar nova questão</a>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

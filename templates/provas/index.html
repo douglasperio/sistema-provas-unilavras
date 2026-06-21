@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Provas{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h4 class="fw-bold mb-0"><i class="bi bi-file-earmark-text me-2"></i>Provas</h4>
+  <a href="{{ url_for('prova_form') }}" class="btn btn-primary">
+    <i class="bi bi-plus-lg me-1"></i> Nova Prova
+  </a>
+</div>
+
+{% if provas %}
+<div class="row g-3">
+  {% for prova in provas %}
+  <div class="col-md-6">
+    <div class="card h-100">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start">
+          <div>
+            <h6 class="fw-bold mb-1">{{ prova.titulo }}</h6>
+            {% if prova.disciplina %}<div class="text-muted small">{{ prova.disciplina }}</div>{% endif %}
+          </div>
+          <span class="badge bg-primary">{{ '%.1f'|format(prova.valor_total) }} pts</span>
+        </div>
+        <div class="mt-2 d-flex gap-3 text-muted small">
+          <span><i class="bi bi-list-ol me-1"></i>{{ prova.num_questoes }} questão(ões)</span>
+          <span><i class="bi bi-calendar me-1"></i>{{ prova.criado_em.strftime('%d/%m/%Y') }}</span>
+          <span><i class="bi bi-file-check me-1"></i>{{ prova.aplicacoes|length }} aplicação(ões)</span>
+        </div>
+      </div>
+      <div class="card-footer bg-transparent d-flex gap-2 flex-wrap">
+        <a href="{{ url_for('prova_questoes', id=prova.id) }}" class="btn btn-sm btn-outline-primary">
+          <i class="bi bi-list-check me-1"></i> Questões
+        </a>
+        <a href="{{ url_for('prova_aplicar', id=prova.id) }}" class="btn btn-sm btn-outline-success">
+          <i class="bi bi-send me-1"></i> Gerar
+        </a>
+        <a href="{{ url_for('prova_form', id=prova.id) }}" class="btn btn-sm btn-outline-secondary">
+          <i class="bi bi-pencil"></i>
+        </a>
+        <form method="post" action="{{ url_for('prova_excluir', id=prova.id) }}"
+              onsubmit="return confirm('Excluir prova \'{{ prova.titulo }}\'?')">
+          <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+        </form>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="card p-5 text-center text-muted">
+  <i class="bi bi-file-earmark-x" style="font-size:2.5rem;"></i>
+  <p class="mt-2 mb-0">Nenhuma prova criada ainda.<br>
+  <a href="{{ url_for('prova_form') }}">Criar primeira prova</a></p>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+{% block title %}Corrigir – {{ aluno.nome if aluno else 'Cópia Extra' }}{% endblock %}
+
+{% block head %}
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<style>
+  .questao-card { border:1px solid #dee2e6; border-radius:10px; padding:1rem; margin-bottom:.8rem; }
+  .questao-card.correta  { border-color:#2ecc71; background:#f0fff4; }
+  .questao-card.errada   { border-color:#e74c3c; background:#fff5f5; }
+  .alt-btn {
+    border:2px solid #dee2e6; border-radius:8px;
+    padding:.5rem .9rem; cursor:pointer; font-weight:700;
+    background:#fff; transition:all .15s; font-size:1rem;
+    min-width:52px; text-align:center;
+  }
+  .alt-btn:hover  { border-color:#1a2e4a; background:#f0f4ff; }
+  .alt-btn.ativa  { border-color:#1a2e4a; background:#1a2e4a; color:#fff; }
+  .alt-btn.certa  { border-color:#2ecc71; background:#2ecc71; color:#fff; }
+  .alt-btn.errada { border-color:#e74c3c; background:#e74c3c; color:#fff; }
+  @media (max-width:768px) {
+    .sidebar      { display: none !important; }
+    .main-content { margin-left: 0 !important; padding: .75rem !important; }
+    .alt-btn { padding:.65rem 1.1rem; font-size:1.1rem; }
+    .questao-card { padding:.8rem; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center gap-2 mb-3">
+  <a href="{{ url_for('correcao_scanner') }}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-qr-code-scan"></i>
+  </a>
+  <div>
+    <h5 class="fw-bold mb-0">
+      {{ aluno.nome if aluno else '(Cópia Extra)' }}
+      {% if versao %}<span class="badge bg-primary ms-1">Versão {{ versao.codigo }}</span>{% endif %}
+    </h5>
+    <small class="text-muted">
+      {{ prova.titulo }} ·
+      {{ aplicacao.turma.nome if aplicacao.turma else '—' }} ·
+      {{ aplicacao.data_aplicacao.strftime('%d/%m/%Y') }}
+    </small>
+  </div>
+  {% if resp_aluno.corrigido %}
+  <span class="badge bg-success ms-auto" style="font-size:.95rem;">
+    {{ '%.1f'|format(resp_aluno.nota_final) }} / {{ '%.1f'|format(prova.valor_total) }}
+  </span>
+  {% endif %}
+</div>
+
+<form method="post" id="formCorrecao">
+  <div class="row g-3">
+    <div class="col-lg-8">
+      {% set respostas_salvas = resp_aluno.respostas %}
+
+      {% for qd in qs_data %}
+      {% set qid = qd.questao_id|string %}
+      {% set resp_salva = respostas_salvas.get(qid, '') %}
+      {% set gab = qd.gabarito or '' %}
+
+      <div class="questao-card
+        {% if resp_aluno.corrigido and qd.tipo != 'dissertativa' %}
+          {% if resp_salva == gab %}correta{% else %}errada{% endif %}
+        {% endif %}" id="card_{{ qid }}">
+
+        <div class="d-flex justify-content-between align-items-start mb-2 flex-wrap gap-1">
+          <div>
+            <span class="badge bg-secondary">{{ loop.index }}</span>
+            <span class="badge bg-light text-dark border small">{{ qd.tipo | replace('_',' ') | title }}</span>
+            <span class="text-muted small ms-1">({{ '%.1f'|format(qd.peso) }} pt)</span>
+          </div>
+          {% if resp_aluno.corrigido and qd.tipo != 'dissertativa' %}
+            {% if resp_salva == gab %}
+            <span class="badge bg-success"><i class="bi bi-check-lg"></i> Certo</span>
+            {% else %}
+            <span class="badge bg-danger"><i class="bi bi-x-lg"></i> Errado</span>
+            {% endif %}
+          {% endif %}
+        </div>
+
+        <p class="mb-2 fw-semibold">{{ qd.enunciado }}</p>
+
+        {% if qd.tipo == 'multipla_escolha' %}
+        <div class="d-flex flex-wrap gap-2 mb-1">
+          {% for alt in qd.alternativas %}
+          <label>
+            <input type="radio" name="q_{{ qid }}" value="{{ alt.letra }}"
+                   {% if resp_salva == alt.letra %}checked{% endif %}
+                   class="d-none alt-radio" data-qid="{{ qid }}">
+            <span class="alt-btn
+              {% if resp_salva == alt.letra %}ativa{% endif %}
+              {% if resp_aluno.corrigido and alt.letra == gab %}certa{% endif %}
+              {% if resp_aluno.corrigido and resp_salva == alt.letra and resp_salva != gab %}errada{% endif %}">
+              {{ alt.letra }}
+            </span>
+          </label>
+          {% endfor %}
+        </div>
+        {% if qd.alternativas %}
+        <div class="ms-1">
+          {% for alt in qd.alternativas %}
+          <div class="small text-muted">{{ alt.letra }}) {{ alt.texto }}</div>
+          {% endfor %}
+        </div>
+        {% endif %}
+        {% if resp_aluno.corrigido and resp_salva != gab and gab %}
+        <div class="small text-success mt-1">
+          <i class="bi bi-check-circle me-1"></i>Gabarito: <strong>{{ gab }}</strong>
+        </div>
+        {% endif %}
+
+        {% elif qd.tipo == 'verdadeiro_falso' %}
+        <div class="d-flex gap-2 mb-1">
+          {% for opcao, rotulo in [('V','Verdadeiro'),('F','Falso')] %}
+          <label>
+            <input type="radio" name="q_{{ qid }}" value="{{ opcao }}"
+                   {% if resp_salva == opcao %}checked{% endif %}
+                   class="d-none alt-radio" data-qid="{{ qid }}">
+            <span class="alt-btn
+              {% if resp_salva == opcao %}ativa{% endif %}
+              {% if resp_aluno.corrigido and opcao == gab %}certa{% endif %}
+              {% if resp_aluno.corrigido and resp_salva == opcao and resp_salva != gab %}errada{% endif %}">
+              {{ rotulo }}
+            </span>
+          </label>
+          {% endfor %}
+        </div>
+        {% if resp_aluno.corrigido and resp_salva != gab and gab %}
+        <div class="small text-success mt-1">
+          <i class="bi bi-check-circle me-1"></i>Gabarito:
+          <strong>{{ 'Verdadeiro' if gab == 'V' else 'Falso' }}</strong>
+        </div>
+        {% endif %}
+
+        {% else %} {# dissertativa #}
+        <div class="d-flex align-items-center gap-2 mt-1">
+          <label class="small fw-semibold text-muted">Nota (0 a {{ '%.1f'|format(qd.peso) }}):</label>
+          <input type="number" name="q_{{ qid }}" class="form-control form-control-sm"
+                 style="max-width:110px;" min="0" max="{{ qd.peso }}" step="0.1"
+                 value="{{ resp_salva }}" placeholder="0">
+        </div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Painel lateral -->
+    <div class="col-lg-4">
+      <div class="card p-3 sticky-top" style="top:1rem;">
+        <div class="fw-bold mb-3">
+          <i class="bi bi-person-check me-1"></i>
+          {{ aluno.nome if aluno else 'Cópia Extra' }}
+        </div>
+
+        {% if resp_aluno.corrigido %}
+        <div class="text-center mb-3">
+          <div style="font-size:2.5rem; font-weight:700; color:#1a2e4a;">
+            {{ '%.1f'|format(resp_aluno.nota_final) }}
+          </div>
+          <div class="text-muted small">de {{ '%.1f'|format(prova.valor_total) }} pontos</div>
+          <div class="text-muted small mt-1">
+            {{ resp_aluno.corrigido_em.strftime('%d/%m/%Y %H:%M') }}
+          </div>
+        </div>
+        {% endif %}
+
+        <button type="submit" class="btn btn-success w-100 mb-2" style="font-size:1rem; padding:.7rem;">
+          <i class="bi bi-check-lg me-1"></i>
+          {{ 'Atualizar' if resp_aluno.corrigido else 'Salvar Correção' }}
+        </button>
+
+        <a href="/mobile/{{ aplicacao.id }}"
+           class="btn btn-outline-primary w-100 mb-2">
+          <i class="bi bi-arrow-left me-1"></i> Lista de Alunos
+        </a>
+
+        <a href="{{ url_for('resultados_aplicacao', id=aplicacao.id) }}"
+           class="btn btn-outline-secondary w-100">
+          <i class="bi bi-bar-chart me-1"></i> Ver Resultados
+        </a>
+
+        <hr>
+        <div class="small text-muted">
+          <div class="mb-1"><b>Prova:</b> {{ prova.titulo }}</div>
+          {% if versao %}<div class="mb-1"><b>Versão:</b> {{ versao.codigo }}</div>{% endif %}
+          <div class="mb-1"><b>Data:</b> {{ aplicacao.data_aplicacao.strftime('%d/%m/%Y') }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.querySelectorAll('.alt-radio').forEach(radio => {
+    radio.addEventListener('change', function() {
+      const qid = this.dataset.qid;
+      document.querySelectorAll(`input[data-qid="${qid}"]`).forEach(r => {
+        r.nextElementSibling.classList.remove('ativa');
+      });
+      this.nextElementSibling.classList.add('ativa');
+    });
+  });
+</script>
+{% endblock %}

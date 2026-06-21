@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>Correção – Mobile</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <style>
+    body { background: #f0f4ff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+    .top-bar {
+      background: #1a2e4a; color: #fff;
+      padding: 1rem 1.25rem;
+      display: flex; align-items: center; gap: .75rem;
+      position: sticky; top: 0; z-index: 100;
+    }
+    .top-bar h1 { font-size: 1.1rem; font-weight: 700; margin: 0; }
+    .top-bar small { font-size: .75rem; color: #9eb5cc; display: block; }
+    .ap-card {
+      background: #fff;
+      border-radius: 14px;
+      padding: 1.1rem 1.25rem;
+      margin: .75rem 1rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,.08);
+      text-decoration: none; color: inherit;
+      display: block;
+      border-left: 5px solid #1a2e4a;
+      transition: transform .1s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .ap-card:active { transform: scale(.97); }
+    .ap-titulo { font-weight: 700; font-size: 1rem; color: #1a2e4a; }
+    .ap-sub    { color: #666; font-size: .85rem; margin-top: .2rem; }
+    .ap-badges { margin-top: .6rem; display: flex; gap: .4rem; flex-wrap: wrap; }
+    .badge-pend { background: #fff3cd; color: #856404; border-radius: 20px; padding: .3rem .75rem; font-size: .8rem; font-weight: 600; }
+    .badge-ok   { background: #d1f5e0; color: #1a7a3c; border-radius: 20px; padding: .3rem .75rem; font-size: .8rem; font-weight: 600; }
+    .seta { color: #aaa; font-size: 1.3rem; margin-left: auto; }
+    .empty { text-align: center; color: #aaa; padding: 3rem 1rem; }
+  </style>
+</head>
+<body>
+
+<div class="top-bar">
+  <i class="bi bi-phone" style="font-size:1.4rem;"></i>
+  <div>
+    <h1>Correção pelo Celular</h1>
+    <small>Toque em uma prova para corrigir</small>
+  </div>
+</div>
+
+<a href="/correcao-foto" class="ap-card" style="border-left-color:#2e86c1; background:#eaf4fc;">
+  <div class="d-flex align-items-center">
+    <i class="bi bi-camera-fill" style="font-size:1.6rem; color:#2e86c1; margin-right:.75rem;"></i>
+    <div class="flex-fill">
+      <div class="ap-titulo">Correção automática por foto</div>
+      <div class="ap-sub">Fotografe o gabarito — a nota sai na hora</div>
+    </div>
+    <span class="seta">›</span>
+  </div>
+</a>
+
+{% if aplicacoes %}
+  {% for ap in aplicacoes %}
+  <a href="/mobile/{{ ap.id }}" class="ap-card">
+    <div class="d-flex align-items-start">
+      <div class="flex-fill">
+        <div class="ap-titulo">{{ ap.prova.titulo }}</div>
+        <div class="ap-sub">
+          {{ ap.turma.nome if ap.turma else '—' }}
+          {% if ap.turma and ap.turma.periodo %}· {{ ap.turma.periodo }}{% endif %}
+          · {{ ap.data_aplicacao.strftime('%d/%m/%Y') }}
+        </div>
+        <div class="ap-badges">
+          {% set pendentes = ap.total_alunos - ap.total_corrigidos %}
+          {% if pendentes > 0 %}
+          <span class="badge-pend"><i class="bi bi-hourglass-split"></i> {{ pendentes }} pendente(s)</span>
+          {% endif %}
+          {% if ap.total_corrigidos > 0 %}
+          <span class="badge-ok"><i class="bi bi-check2"></i> {{ ap.total_corrigidos }} corrigido(s)</span>
+          {% endif %}
+        </div>
+      </div>
+      <span class="seta"><i class="bi bi-chevron-right"></i></span>
+    </div>
+  </a>
+  {% endfor %}
+{% else %}
+  <div class="empty">
+    <i class="bi bi-inbox" style="font-size:3rem; display:block; margin-bottom:.5rem;"></i>
+    Nenhuma prova aplicada ainda.
+  </div>
+{% endif %}
+
+</body>
+</html>

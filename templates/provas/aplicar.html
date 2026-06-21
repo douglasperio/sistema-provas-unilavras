@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+{% block title %}Aplicar – {{ prova.titulo }}{% endblock %}
+{% block content %}
+<div class="d-flex align-items-center gap-2 mb-4">
+  <a href="{{ url_for('provas_index') }}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left"></i>
+  </a>
+  <h4 class="fw-bold mb-0">Gerar Prova</h4>
+</div>
+
+<div class="row g-3">
+  <!-- Formulário -->
+  <div class="col-md-5">
+    <div class="card mb-3">
+      <div class="card-body">
+        <div class="text-muted small">Prova selecionada</div>
+        <div class="fw-bold">{{ prova.titulo }}</div>
+        {% if prova.disciplina %}<div class="text-muted small">{{ prova.disciplina }}</div>{% endif %}
+        <div class="mt-1 text-muted small">
+          <i class="bi bi-list-ol me-1"></i>{{ prova.num_questoes }} questão(ões)
+          <i class="bi bi-award ms-2 me-1"></i>{{ '%.1f'|format(prova.valor_total) }} pts
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header fw-semibold">
+        <i class="bi bi-send me-1"></i> Configurar Geração
+      </div>
+      <div class="card-body">
+        {% if turmas %}
+        <form method="post">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Turma</label>
+            <select name="turma_id" class="form-select" required>
+              <option value="">Selecione...</option>
+              {% for t in turmas %}
+              <option value="{{ t.id }}">
+                {{ t.nome }}{% if t.periodo %} – {{ t.periodo }}{% endif %}
+                ({{ t.alunos|length }} aluno(s))
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Data de Aplicação</label>
+            <input type="date" name="data_aplicacao" class="form-control" required value="{{ hoje }}">
+          </div>
+
+          <hr class="my-3">
+          <div class="fw-semibold mb-2 small text-muted">
+            <i class="bi bi-shuffle me-1"></i> Versões da Prova (anti-cola)
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Quantos <u>tipos</u> de prova?</label>
+            <div class="d-flex align-items-center gap-2">
+              <input type="number" name="num_versoes" id="inpVersoes" class="form-control"
+                     min="1" max="26" value="1" style="max-width:100px;"
+                     oninput="atualizarPreview()">
+              <span class="text-muted small" id="labelVersoes">Versão A</span>
+            </div>
+            <div class="form-text">
+              Cada versão embaralha a ordem das questões e das alternativas.
+              Use 1 se não precisar de versões diferentes.
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-success w-100">
+            <i class="bi bi-check-lg me-1"></i> Gerar Provas
+          </button>
+        </form>
+        {% else %}
+        <div class="text-center text-muted py-3">
+          <i class="bi bi-people" style="font-size:2rem;"></i>
+          <p class="mt-2">Nenhuma turma cadastrada.<br>
+          <a href="{{ url_for('turma_nova') }}">Criar turma primeiro</a></p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Explicação -->
+  <div class="col-md-7">
+    <div class="card mb-3">
+      <div class="card-header fw-semibold"><i class="bi bi-info-circle me-1"></i> Como Funciona</div>
+      <div class="card-body">
+        <div class="d-flex flex-column gap-3">
+          <div class="d-flex gap-3 align-items-start">
+            <span class="badge bg-primary rounded-circle" style="width:28px;height:28px;line-height:20px;text-align:center;">1</span>
+            <div>
+              <div class="fw-semibold">Configure e Gere</div>
+              <div class="text-muted small">O sistema cria versões embaralhadas (A, B, C…), distribui os alunos nas versões e gera um QR Code único para cada um.</div>
+            </div>
+          </div>
+          <div class="d-flex gap-3 align-items-start">
+            <span class="badge bg-primary rounded-circle" style="width:28px;height:28px;line-height:20px;text-align:center;">2</span>
+            <div>
+              <div class="fw-semibold">Imprima o PDF</div>
+              <div class="text-muted small">Baixe o PDF único com todas as provas. Cada folha tem na <b>página 1</b>: QR Code + gabarito de bolhas. As <b>páginas seguintes</b> contêm as questões.</div>
+            </div>
+          </div>
+          <div class="d-flex gap-3 align-items-start">
+            <span class="badge bg-primary rounded-circle" style="width:28px;height:28px;line-height:20px;text-align:center;">3</span>
+            <div>
+              <div class="fw-semibold">Corrija pelo Celular</div>
+              <div class="text-muted small">Abra a tela de correção no celular, escaneie o QR Code da folha do aluno e marque as respostas. A nota é calculada automaticamente.</div>
+            </div>
+          </div>
+          <div class="d-flex gap-3 align-items-start">
+            <span class="badge bg-success rounded-circle" style="width:28px;height:28px;line-height:20px;text-align:center;">4</span>
+            <div>
+              <div class="fw-semibold">Exporte os Resultados</div>
+              <div class="text-muted small">Baixe um arquivo Excel com todas as notas, gabaritos por versão e situação de cada aluno.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header fw-semibold"><i class="bi bi-shuffle me-1"></i> Preview das Versões</div>
+      <div class="card-body">
+        <div id="previewVersoes" class="d-flex flex-wrap gap-2">
+          <span class="badge bg-primary fs-6 px-3 py-2">Versão A</span>
+        </div>
+        <div class="text-muted small mt-2">
+          Cada versão tem as mesmas questões, mas com ordem e alternativas embaralhadas.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function atualizarPreview() {
+    const n = parseInt(document.getElementById('inpVersoes').value) || 1;
+    const codigos = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.slice(0, Math.min(n, 26)).split('');
+    const cores   = ['primary','success','warning','danger','info','secondary'];
+    document.getElementById('labelVersoes').textContent =
+      codigos.map(c => 'Versão ' + c).join(', ');
+    document.getElementById('previewVersoes').innerHTML = codigos.map((c, i) =>
+      `<span class="badge bg-${cores[i%cores.length]} fs-6 px-3 py-2">Versão ${c}</span>`
+    ).join('');
+  }
+  atualizarPreview();
+</script>
+{% endblock %}

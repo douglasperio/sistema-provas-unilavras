@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}{{ turma.nome }}{% endblock %}
+{% block content %}
+<div class="d-flex align-items-center gap-2 mb-1">
+  <a href="{{ url_for('turmas_index') }}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left"></i>
+  </a>
+  <h4 class="fw-bold mb-0">{{ turma.nome }}</h4>
+  {% if turma.periodo %}<span class="badge bg-secondary">{{ turma.periodo }}</span>{% endif %}
+</div>
+<p class="text-muted mb-4 ms-5">{{ alunos|length }} aluno(s)</p>
+
+<div class="row g-3">
+  <!-- Painel esquerdo: adicionar aluno + importar Excel -->
+  <div class="col-md-4">
+    <div class="card mb-3">
+      <div class="card-header"><i class="bi bi-person-plus me-1"></i> Adicionar Aluno</div>
+      <div class="card-body">
+        <form method="post" action="{{ url_for('aluno_novo', turma_id=turma.id) }}">
+          <div class="mb-2">
+            <label class="form-label small fw-semibold">Nome</label>
+            <input type="text" name="nome" class="form-control form-control-sm" required
+                   placeholder="Nome completo">
+          </div>
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">Matrícula</label>
+            <input type="text" name="matricula" class="form-control form-control-sm"
+                   placeholder="Opcional">
+          </div>
+          <button type="submit" class="btn btn-primary btn-sm w-100">
+            <i class="bi bi-plus-lg me-1"></i> Adicionar
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><i class="bi bi-file-earmark-excel me-1"></i> Importar via Excel</div>
+      <div class="card-body">
+        <p class="text-muted small mb-2">
+          Envie um arquivo <b>.xlsx</b> com:
+          <br>• Coluna A: Nome do aluno
+          <br>• Coluna B: Matrícula (opcional)
+          <br>A <b>primeira linha</b> (cabeçalho) é ignorada.
+        </p>
+        <form method="post" action="{{ url_for('importar_alunos_excel', turma_id=turma.id) }}"
+              enctype="multipart/form-data">
+          <div class="mb-2">
+            <input type="file" name="arquivo" class="form-control form-control-sm"
+                   accept=".xlsx,.xls" required>
+          </div>
+          <button type="submit" class="btn btn-success btn-sm w-100">
+            <i class="bi bi-upload me-1"></i> Importar
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lista de alunos -->
+  <div class="col-md-8">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-people me-1"></i> Alunos</span>
+        <a href="{{ url_for('turma_editar', id=turma.id) }}" class="btn btn-sm btn-outline-secondary">
+          <i class="bi bi-pencil"></i> Editar Turma
+        </a>
+      </div>
+      {% if alunos %}
+      <div class="list-group list-group-flush">
+        {% for aluno in alunos %}
+        <div class="list-group-item d-flex justify-content-between align-items-center">
+          <div>
+            <span class="fw-semibold">{{ aluno.nome }}</span>
+            {% if aluno.matricula %}
+            <span class="text-muted small ms-2">{{ aluno.matricula }}</span>
+            {% endif %}
+          </div>
+          <form method="post" action="{{ url_for('aluno_excluir', id=aluno.id) }}"
+                onsubmit="return confirm('Remover {{ aluno.nome }}?')">
+            <button class="btn btn-sm btn-outline-danger">
+              <i class="bi bi-trash"></i>
+            </button>
+          </form>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="card-body text-center text-muted">
+        Nenhum aluno cadastrado. Adicione manualmente ou importe via Excel.
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

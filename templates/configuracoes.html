@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% block title %}Configurações{% endblock %}
+{% block content %}
+<div class="d-flex align-items-center gap-2 mb-4">
+  <a href="{{ url_for('index') }}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left"></i>
+  </a>
+  <h4 class="fw-bold mb-0"><i class="bi bi-gear me-2"></i>Configurações</h4>
+</div>
+
+<div class="row g-3">
+  <div class="col-md-7">
+    <div class="card">
+      <div class="card-header fw-semibold">
+        <i class="bi bi-sliders me-1"></i> Configurações Gerais
+      </div>
+      <div class="card-body">
+        <form method="post">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Nome da Instituição</label>
+            <input type="text" name="nome_escola" class="form-control"
+                   value="{{ cfg.get('nome_escola', 'FELA – Fundação Educacional de Lavras') }}"
+                   placeholder="Ex: FELA – Fundação Educacional de Lavras">
+            <div class="form-text">Aparece no cabeçalho das provas em PDF.</div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Nome do Curso</label>
+            <input type="text" name="nome_curso" class="form-control"
+                   value="{{ cfg.get('nome_curso', 'Odontologia') }}"
+                   placeholder="Ex: Odontologia">
+          </div>
+
+          <hr>
+          <div class="mb-1">
+            <label class="form-label fw-semibold">
+              <i class="bi bi-stars me-1 text-primary"></i>
+              Chave da API Anthropic (Claude IA)
+            </label>
+            <div class="input-group">
+              <input type="password" name="anthropic_api_key" id="inpApiKey" class="form-control"
+                     value="{{ cfg.get('anthropic_api_key', '') }}"
+                     placeholder="sk-ant-api03-...">
+              <button class="btn btn-outline-secondary" type="button"
+                      onclick="toggleKey()"><i class="bi bi-eye" id="eyeIcon"></i></button>
+            </div>
+            <div class="form-text">
+              Necessária para gerar questões com IA.
+              Obtenha em
+              <a href="https://console.anthropic.com/account/keys" target="_blank">
+                console.anthropic.com
+              </a>. A chave é salva localmente no computador.
+            </div>
+          </div>
+
+          {% if cfg.get('anthropic_api_key') %}
+          <div class="alert alert-success py-1 small mt-2">
+            <i class="bi bi-check-circle me-1"></i>
+            Chave configurada ({{ cfg.anthropic_api_key[:8] }}…)
+          </div>
+          {% else %}
+          <div class="alert alert-warning py-1 small mt-2">
+            <i class="bi bi-exclamation-triangle me-1"></i>
+            Chave não configurada — geração de questões com IA está desativada.
+          </div>
+          {% endif %}
+
+          <div class="mt-4">
+            <button type="submit" class="btn btn-primary">
+              <i class="bi bi-check-lg me-1"></i> Salvar Configurações
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-5">
+    <div class="card">
+      <div class="card-header fw-semibold">
+        <i class="bi bi-stars me-1 text-primary"></i> Como usar a IA
+      </div>
+      <div class="card-body">
+        <div class="d-flex flex-column gap-3 small">
+          <div>
+            <div class="fw-semibold">1. Obtenha a chave Anthropic</div>
+            <div class="text-muted">Acesse <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a>, crie uma conta e gere uma API Key.</div>
+          </div>
+          <div>
+            <div class="fw-semibold">2. Cole a chave aqui</div>
+            <div class="text-muted">A chave começa com <code>sk-ant-</code> e é salva no arquivo <code>config.json</code> local.</div>
+          </div>
+          <div>
+            <div class="fw-semibold">3. Gere questões</div>
+            <div class="text-muted">No Banco de Questões, ao criar uma nova questão, clique em <b>"Gerar com IA"</b>. Preencha disciplina, assunto e dificuldade antes.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mt-3">
+      <div class="card-header fw-semibold">
+        <i class="bi bi-file-earmark-excel me-1"></i> Formato Excel (Importar Alunos)
+      </div>
+      <div class="card-body small">
+        <p class="text-muted">O arquivo Excel deve ter:</p>
+        <table class="table table-sm table-bordered mb-0">
+          <thead class="table-light">
+            <tr><th>A</th><th>B</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Nome</td><td>Matrícula</td></tr>
+            <tr><td>João Silva</td><td>2024001</td></tr>
+            <tr><td>Maria Souza</td><td>2024002</td></tr>
+          </tbody>
+        </table>
+        <div class="text-muted mt-1">A primeira linha (cabeçalho) é ignorada automaticamente.</div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function toggleKey() {
+    const inp = document.getElementById('inpApiKey');
+    const ico = document.getElementById('eyeIcon');
+    if (inp.type === 'password') {
+      inp.type = 'text';
+      ico.className = 'bi bi-eye-slash';
+    } else {
+      inp.type = 'password';
+      ico.className = 'bi bi-eye';
+    }
+  }
+</script>
+{% endblock %}

@@ -1,0 +1,271 @@
+{% extends "base.html" %}
+{% block title %}Imprimir – {{ prova.titulo }}{% endblock %}
+
+{% block head %}
+<style>
+@media print {
+  .no-print { display: none !important; }
+  .ficha-gabarito  { page-break-after: always; break-after: page; }
+  .pagina-questoes { page-break-after: always; break-after: page; }
+  body { background: #fff !important; font-size: 10pt; }
+  .main-content { margin: 0 !important; padding: 0 !important; }
+}
+.ficha-gabarito {
+  border: 2px solid #222;
+  padding: .9rem 1rem;
+  margin-bottom: 1.2rem;
+  background: #fff;
+  max-width: 210mm;
+  font-family: Arial, sans-serif;
+}
+.versao-badge {
+  display: inline-block;
+  background: #1a2e4a; color: #fff;
+  font-size: 1.2rem; font-weight: 900;
+  padding: .2rem .7rem; border-radius: 5px; letter-spacing: 2px;
+}
+.bolinha {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px;
+  border: 1.5px solid #444; border-radius: 50%;
+  font-size: .72rem; font-weight: 700; margin: 0 2px;
+}
+.gab-grid { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .4rem; }
+.gab-item {
+  border: 1px solid #bbb; border-radius: 5px;
+  padding: .2rem .4rem;
+  display: flex; align-items: center; gap: .3rem;
+  min-width: 140px; font-size: .82rem;
+}
+.gab-num { font-weight: 700; min-width: 18px; }
+.linha-campo { border-bottom: 1px solid #888; display: inline-block; }
+.pagina-questoes {
+  max-width: 210mm; margin-bottom: 1.5rem;
+  background: #fff; padding: .9rem 1rem;
+  border: 1px solid #ccc;
+}
+.questao-item { margin-bottom: 1rem; }
+.questao-num  { font-weight: 700; color: #1a2e4a; }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- ── Barra de ações (não imprime) ── -->
+<div class="no-print d-flex align-items-center gap-3 mb-4 flex-wrap">
+  <a href="{{ url_for('provas_index') }}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left"></i>
+  </a>
+  <div>
+    <h5 class="fw-bold mb-0">{{ prova.titulo }}</h5>
+    <small class="text-muted">
+      {{ aplicacao.turma.nome if aplicacao.turma else '—' }} ·
+      {{ aplicacao.data_aplicacao.strftime('%d/%m/%Y') }} ·
+      {{ fichas|length }} aluno(s) ·
+      {{ aplicacao.num_versoes }} versão(ões)
+    </small>
+  </div>
+  <div class="ms-auto d-flex gap-2 flex-wrap">
+    <a href="{{ url_for('aplicacao_gerar_pdf', id=aplicacao.id) }}" class="btn btn-success">
+      <i class="bi bi-file-earmark-pdf me-1"></i> Baixar PDF
+    </a>
+    <button onclick="window.print()" class="btn btn-primary">
+      <i class="bi bi-printer me-1"></i> Imprimir
+    </button>
+    <a href="{{ url_for('resultados_aplicacao', id=aplicacao.id) }}" class="btn btn-outline-secondary">
+      <i class="bi bi-bar-chart me-1"></i> Resultados
+    </a>
+  </div>
+</div>
+
+<div class="no-print alert alert-info mb-3">
+  <i class="bi bi-info-circle me-1"></i>
+  <strong>Layout:</strong> Página 1 de cada aluno = <b>Gabarito + QR Code</b>.
+  Depois = <b>Questões por versão</b> (uma impressão por versão compartilhada).
+  Use <b>"Baixar PDF"</b> para ter um único arquivo com tudo.
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     SEÇÃO 1 — FICHAS INDIVIDUAIS (gabarito + QR, 1 por aluno)
+     ══════════════════════════════════════════════════════ -->
+{% for ficha in fichas %}
+<div class="ficha-gabarito">
+
+  <!-- Cabeçalho -->
+  <table style="width:100%; border-collapse:collapse;">
+    <tr>
+      <td style="vertical-align:top; width:70%;">
+        <div style="font-weight:900; font-size:1rem;">{{ prova.titulo }}</div>
+        {% if prova.disciplina %}
+          <div style="font-size:.82rem; color:#555;">{{ prova.disciplina }}</div>
+        {% endif %}
+        <div style="margin-top:.4rem; font-size:.85rem; line-height:2.1;">
+          <b>Aluno:</b>
+          <span class="linha-campo" style="min-width:200px; padding-left:4px;">
+            {{ ficha.aluno.nome if ficha.aluno else '' }}
+          </span><br>
+          <b>Matrícula:</b>
+          <span class="linha-campo" style="min-width:90px; padding-left:4px;">
+            {{ ficha.aluno.matricula if ficha.aluno else '' }}
+          </span>
+          &nbsp;&nbsp;
+          <b>Turma:</b>
+          <span class="linha-campo" style="min-width:110px; padding-left:4px;">
+            {{ aplicacao.turma.nome if aplicacao.turma else '' }}
+          </span>
+          &nbsp;&nbsp;
+          <b>Data:</b>
+          <span class="linha-campo" style="min-width:80px; padding-left:4px;">
+            {{ aplicacao.data_aplicacao.strftime('%d/%m/%Y') }}
+          </span>
+        </div>
+      </td>
+      <td style="vertical-align:top; text-align:center; width:30%;">
+        <img src="data:image/png;base64,{{ ficha.qr }}"
+             width="100" height="100" style="image-rendering:pixelated;">
+        {% if ficha.versao %}
+          <div><span class="versao-badge">{{ ficha.versao.codigo }}</span></div>
+        {% endif %}
+        <div style="font-size:.6rem; color:#999; margin-top:2px;">
+          {{ ficha.resposta.token[:10] }}…
+        </div>
+      </td>
+    </tr>
+  </table>
+
+  {% if prova.instrucoes %}
+  <div style="border:1px solid #ddd; border-radius:4px; padding:.3rem .5rem;
+              font-size:.78rem; margin:.5rem 0; background:#fafafa;">
+    <b>Instrução:</b> {{ prova.instrucoes }}
+  </div>
+  {% endif %}
+
+  <hr style="margin:.4rem 0; border-color:#888;">
+  <div style="font-weight:700; font-size:.82rem; margin-bottom:.3rem;">
+    GABARITO — Marque apenas uma alternativa por questão
+  </div>
+
+  <!-- Grade de bolhas -->
+  <div class="gab-grid">
+    {% if ficha.versao %}
+      {% for qd in ficha.versao.questoes_data %}
+      <div class="gab-item">
+        <span class="gab-num">{{ loop.index }}.</span>
+        {% if qd.tipo == 'multipla_escolha' %}
+          {% for alt in qd.alternativas %}<span class="bolinha">{{ alt.letra }}</span>{% endfor %}
+        {% elif qd.tipo == 'verdadeiro_falso' %}
+          <span class="bolinha">V</span><span class="bolinha">F</span>
+        {% else %}
+          <span style="font-size:.72rem; color:#888;">Dissert.</span>
+        {% endif %}
+      </div>
+      {% endfor %}
+    {% else %}
+      {% for item in prova.itens %}
+      <div class="gab-item">
+        <span class="gab-num">{{ loop.index }}.</span>
+        {% if item.questao.tipo == 'multipla_escolha' %}
+          {% for alt in item.questao.alternativas %}<span class="bolinha">{{ alt.letra }}</span>{% endfor %}
+        {% elif item.questao.tipo == 'verdadeiro_falso' %}
+          <span class="bolinha">V</span><span class="bolinha">F</span>
+        {% else %}
+          <span style="font-size:.72rem; color:#888;">Dissert.</span>
+        {% endif %}
+      </div>
+      {% endfor %}
+    {% endif %}
+  </div>
+
+  <div style="text-align:right; font-size:.75rem; color:#666; margin-top:.5rem;">
+    Valor: <b>{{ '%.1f'|format(prova.valor_total) }} pts</b>
+    &nbsp;|&nbsp; Nota: _______ / {{ '%.1f'|format(prova.valor_total) }}
+  </div>
+</div>
+{% endfor %}
+
+<!-- ══════════════════════════════════════════════════════
+     SEÇÃO 2 — QUESTÕES POR VERSÃO (1 impressão por versão)
+     Usa aplicacao.versoes diretamente — sem deduplicação em template
+     ══════════════════════════════════════════════════════ -->
+<div class="no-print alert alert-secondary mt-4">
+  <i class="bi bi-file-text me-1"></i>
+  Questões de cada versão abaixo. Uma cópia por versão é suficiente
+  (alunos da mesma versão compartilham o caderno de questões).
+</div>
+
+{% for versao in aplicacao.versoes %}
+<div class="pagina-questoes">
+  <div style="font-weight:900; font-size:1rem; margin-bottom:.3rem;">
+    {{ prova.titulo }}
+    — <span class="versao-badge">Versão {{ versao.codigo }}</span>
+  </div>
+  {% if prova.disciplina %}
+    <div style="font-size:.82rem; color:#555; margin-bottom:.4rem;">{{ prova.disciplina }}</div>
+  {% endif %}
+  {% if prova.instrucoes %}
+  <div style="font-size:.78rem; border:1px solid #ddd; padding:.3rem .5rem;
+              border-radius:4px; background:#fafafa; margin-bottom:.5rem;">
+    <b>Instrução:</b> {{ prova.instrucoes }}
+  </div>
+  {% endif %}
+  <hr style="margin:.3rem 0;">
+  {% for qd in versao.questoes_data %}
+  <div class="questao-item">
+    <div class="questao-num">{{ loop.index }}.
+      <span style="font-size:.8rem; color:#666; font-weight:normal;">
+        ({{ '%.1f'|format(qd.peso) }} pt)
+      </span>
+      {{ qd.enunciado }}
+    </div>
+    {% if qd.tipo in ('multipla_escolha', 'verdadeiro_falso') %}
+    <div style="margin-left:1.2rem; margin-top:.2rem;">
+      {% for alt in qd.alternativas %}
+      <div><b>{{ alt.letra }})</b> {{ alt.texto }}</div>
+      {% endfor %}
+    </div>
+    {% elif qd.tipo == 'dissertativa' %}
+    <div style="margin-left:1.2rem; color:#aaa; font-size:.8rem;">
+      ___________________________________________<br>
+      ___________________________________________
+    </div>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endfor %}
+
+<!-- Fallback: sem versões (prova aplicada sem embaralhamento) -->
+{% if not aplicacao.versoes %}
+<div class="pagina-questoes">
+  <div style="font-weight:900; font-size:1rem; margin-bottom:.5rem;">
+    {{ prova.titulo }} — QUESTÕES
+  </div>
+  <hr style="margin:.3rem 0;">
+  {% for item in prova.itens %}
+  <div class="questao-item">
+    <div class="questao-num">{{ loop.index }}.
+      <span style="font-size:.8rem; color:#666; font-weight:normal;">
+        ({{ '%.1f'|format(item.peso) }} pt)
+      </span>
+      {{ item.questao.enunciado }}
+    </div>
+    {% if item.questao.tipo in ('multipla_escolha', 'verdadeiro_falso') %}
+    <div style="margin-left:1.2rem; margin-top:.2rem;">
+      {% for alt in item.questao.alternativas %}
+      <div><b>{{ alt.letra }})</b> {{ alt.texto }}</div>
+      {% endfor %}
+      {% if item.questao.tipo == 'verdadeiro_falso' %}
+      <div><b>V)</b> Verdadeiro</div><div><b>F)</b> Falso</div>
+      {% endif %}
+    </div>
+    {% else %}
+    <div style="margin-left:1.2rem; color:#aaa; font-size:.8rem;">
+      ___________________________________________<br>
+      ___________________________________________
+    </div>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% endblock %}
