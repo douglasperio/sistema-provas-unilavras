@@ -98,10 +98,19 @@ document.getElementById('btnImportar').addEventListener('click', async () => {
   fd.append('assunto', document.getElementById('inputAssunto').value.trim());
 
   try {
-    const res = await fetch('/api/importar-questoes', { method: 'POST', body: fd });
+    const controller = new AbortController();
+    const tid = setTimeout(() => controller.abort(), 28000);
+    let res;
+    try {
+      res = await fetch('/api/importar-questoes', { method: 'POST', body: fd, signal: controller.signal });
+    } catch(fe) {
+      throw new Error('O servidor demorou demais. Tente um arquivo com menos páginas ou menos questões.');
+    } finally {
+      clearTimeout(tid);
+    }
     let data;
     try { data = await res.json(); }
-    catch(_) { throw new Error('O servidor demorou demais para responder. Tente um arquivo menor ou com menos questões.'); }
+    catch(_) { throw new Error('Resposta inválida do servidor. Verifique os logs no Render.'); }
     if (!res.ok || data.erro) throw new Error(data.erro || 'Erro desconhecido.');
     questoesExtraidas = data.questoes || [];
     if (!questoesExtraidas.length) throw new Error('Nenhuma questão encontrada no arquivo.');

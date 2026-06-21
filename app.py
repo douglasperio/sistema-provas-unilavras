@@ -874,10 +874,10 @@ Se o gabarito não estiver no documento use null. Para dissertativa omita altern
 
     try:
         import anthropic as _anthropic
-        client = _anthropic.Anthropic(api_key=api_key)
+        client = _anthropic.Anthropic(api_key=api_key, timeout=25.0)
         msg = client.messages.create(
-            model='claude-opus-4-5',
-            max_tokens=8000,
+            model='claude-haiku-4-5-20251001',
+            max_tokens=4000,
             messages=[{'role': 'user', 'content': content_blocks}]
         )
         raw = msg.content[0].text.strip()
@@ -886,7 +886,7 @@ Se o gabarito não estiver no documento use null. Para dissertativa omita altern
         data = json.loads(raw)
         return jsonify({'ok': True, 'questoes': data.get('questoes', [])})
     except Exception as e:
-        return jsonify({'erro': f'Erro ao processar com IA: {e}'}), 500
+        return jsonify({'erro': f'Erro ao processar com IA: {str(e)}'}), 500
 
 
 @app.route('/api/salvar-questoes-importadas', methods=['POST'])
