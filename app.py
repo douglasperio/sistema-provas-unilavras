@@ -839,8 +839,8 @@ def api_importar_questoes():
     if not texto_extraido.strip():
         return jsonify({'erro': 'Não foi possível extrair texto do arquivo. Verifique se o PDF não é uma imagem escaneada.'}), 400
 
-    # Limita a 12000 caracteres para evitar timeout
-    texto_extraido = texto_extraido[:12000]
+    # Limita a 4000 caracteres para caber no timeout do servidor gratuito
+    texto_extraido = texto_extraido[:4000]
     content_blocks = [{'type': 'text', 'text': f'Conteúdo do arquivo:\n\n{texto_extraido}'}]
 
     disc_hint    = f'\nDisciplina padrão: {disciplina}' if disciplina else ''
@@ -874,7 +874,7 @@ Se o gabarito não estiver no documento use null. Para dissertativa omita altern
 
     try:
         import anthropic as _anthropic
-        client = _anthropic.Anthropic(api_key=api_key, timeout=25.0)
+        client = _anthropic.Anthropic(api_key=api_key, timeout=20.0)
         msg = client.messages.create(
             model='claude-haiku-4-5-20251001',
             max_tokens=4000,

@@ -99,7 +99,7 @@ document.getElementById('btnImportar').addEventListener('click', async () => {
 
   try {
     const controller = new AbortController();
-    const tid = setTimeout(() => controller.abort(), 28000);
+    const tid = setTimeout(() => controller.abort(), 25000);
     let res;
     try {
       res = await fetch('/api/importar-questoes', { method: 'POST', body: fd, signal: controller.signal });
