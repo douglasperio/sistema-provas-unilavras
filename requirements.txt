@@ -10,3 +10,4 @@ pyopenssl>=23.0
 opencv-python-headless
 numpy
 gunicorn>=21.0
+psycopg2-binary>=2.9

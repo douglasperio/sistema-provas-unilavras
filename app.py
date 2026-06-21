@@ -73,10 +73,15 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'sistema-provas-fela-2025')
 
-# Em produção (Railway) usa /data/provas.db (volume persistente); local usa instance/provas.db
-_db_path = os.environ.get('DATABASE_PATH', os.path.join(BASE_DIR, 'instance', 'provas.db'))
-os.makedirs(os.path.dirname(_db_path), exist_ok=True)
-app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{_db_path}'
+# PostgreSQL em produção (Render define DATABASE_URL), SQLite local
+_database_url = os.environ.get('DATABASE_URL', '')
+if _database_url.startswith('postgres://'):
+    _database_url = _database_url.replace('postgres://', 'postgresql://', 1)
+if not _database_url:
+    _db_path = os.path.join(BASE_DIR, 'instance', 'provas.db')
+    os.makedirs(os.path.dirname(_db_path), exist_ok=True)
+    _database_url = f'sqlite:///{_db_path}'
+app.config['SQLALCHEMY_DATABASE_URI'] = _database_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
@@ -1543,16 +1548,28 @@ def migrar_banco():
         except Exception:
             pass
 
-        # ── Tabela nova: versao_prova ──
-        conn.execute(text("""
-            CREATE TABLE IF NOT EXISTS versao_prova (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                aplicacao_id INTEGER NOT NULL,
-                codigo TEXT,
-                questoes_json TEXT,
-                FOREIGN KEY (aplicacao_id) REFERENCES aplicacao_prova(id)
-            )
-        """))
+        # ── Tabela nova: versao_prova (sintaxe compatível com SQLite e PostgreSQL) ──
+        dialect = db.engine.dialect.name
+        if dialect == 'postgresql':
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS versao_prova (
+                    id SERIAL PRIMARY KEY,
+                    aplicacao_id INTEGER NOT NULL,
+                    codigo TEXT,
+                    questoes_json TEXT,
+                    FOREIGN KEY (aplicacao_id) REFERENCES aplicacao_prova(id)
+                )
+            """))
+        else:
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS versao_prova (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    aplicacao_id INTEGER NOT NULL,
+                    codigo TEXT,
+                    questoes_json TEXT,
+                    FOREIGN KEY (aplicacao_id) REFERENCES aplicacao_prova(id)
+                )
+            """))
         conn.commit()
 
 
