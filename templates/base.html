@@ -69,17 +69,16 @@
     <a href="{{ url_for('provas_index') }}" class="nav-link {% if 'prova' in request.endpoint %}active{% endif %}">
       <i class="bi bi-file-earmark-text"></i> Provas
     </a>
-    <a href="{{ url_for('resultados_index') }}" class="nav-link {% if 'resultado' in request.endpoint %}active{% endif %}">
-      <i class="bi bi-bar-chart"></i> Provas corrigidas
-    </a>
-
     <a href="{{ url_for('turmas_index') }}" class="nav-link {% if 'turma' in request.endpoint or 'aluno' in request.endpoint %}active{% endif %}">
       <i class="bi bi-people"></i> Turmas & Alunos
     </a>
 
-    <div class="nav-section">Sistema</div>
+    <div class="nav-section">Correção</div>
     <a href="{{ url_for('url_publica') }}" class="nav-link {% if request.endpoint == 'url_publica' %}active{% endif %}">
-      <i class="bi bi-qr-code"></i> QR Code / Internet
+      <i class="bi bi-qr-code"></i> Corrigir prova
+    </a>
+    <a href="{{ url_for('resultados_index') }}" class="nav-link {% if 'resultado' in request.endpoint %}active{% endif %}">
+      <i class="bi bi-bar-chart"></i> Provas corrigidas
     </a>
     <a href="{{ url_for('configuracoes') }}" class="nav-link {% if request.endpoint == 'configuracoes' %}active{% endif %}">
       <i class="bi bi-gear"></i> Configurações

@@ -611,7 +611,7 @@ def gerar_pdf_aplicacao(aplicacao: AplicacaoProva) -> io.BytesIO:
 
         for n, qd in enumerate(qs_data, 1):
             story.append(Paragraph(
-                f'<b>Questão {n}</b>  <font size=8 color=grey>({qd["peso"]:.1f} pt)</font>',
+                f'<b>Questão {n}</b>  <font size=8 color=grey>(Valor da questão: {qd["peso"]:.1f} pt)</font>',
                 sQ))
             story.append(Paragraph(qd['enunciado'], sAlt))
             if qd['tipo'] in ('multipla_escolha', 'verdadeiro_falso'):
