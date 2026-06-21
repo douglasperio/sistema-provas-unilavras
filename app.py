@@ -792,6 +792,117 @@ def banco_form(id=None):
                            disciplinas=disciplinas, assuntos=assuntos)
 
 
+@app.route('/banco/importar', methods=['GET'])
+def banco_importar():
+    disciplinas = sorted({d[0] for d in db.session.query(Questao.disciplina).distinct() if d[0]})
+    assuntos    = sorted({a[0] for a in db.session.query(Questao.assunto).distinct() if a[0]})
+    return render_template('banco/importar.html', disciplinas=disciplinas, assuntos=assuntos)
+
+
+@app.route('/api/importar-questoes', methods=['POST'])
+def api_importar_questoes():
+    cfg = get_config()
+    api_key = cfg.get('anthropic_api_key', '').strip()
+    if not api_key:
+        return jsonify({'erro': 'Chave da API Anthropic não configurada. Vá em Configurações.'}), 400
+
+    arquivo    = request.files.get('arquivo')
+    disciplina = request.form.get('disciplina', '').strip()
+    assunto    = request.form.get('assunto', '').strip()
+
+    if not arquivo or not arquivo.filename:
+        return jsonify({'erro': 'Nenhum arquivo enviado.'}), 400
+
+    file_bytes = arquivo.read()
+    filename   = arquivo.filename.lower()
+    content_blocks = []
+
+    if filename.endswith('.pdf'):
+        b64 = base64.b64encode(file_bytes).decode()
+        content_blocks.append({
+            'type': 'document',
+            'source': {'type': 'base64', 'media_type': 'application/pdf', 'data': b64}
+        })
+    elif filename.endswith('.docx'):
+        try:
+            from docx import Document as DocxDocument
+            import io as _io
+            doc  = DocxDocument(_io.BytesIO(file_bytes))
+            texto = '\n'.join(p.text for p in doc.paragraphs if p.text.strip())
+        except Exception as e:
+            return jsonify({'erro': f'Erro ao ler arquivo Word: {e}'}), 400
+        content_blocks.append({'type': 'text', 'text': f'Conteúdo do arquivo:\n\n{texto}'})
+    else:
+        return jsonify({'erro': 'Formato não suportado. Use PDF ou DOCX (.docx).'}), 400
+
+    disc_hint    = f'\nDisciplina padrão: {disciplina}' if disciplina else ''
+    assunto_hint = f'\nAssunto padrão: {assunto}' if assunto else ''
+
+    prompt = f"""Analise o documento fornecido e extraia TODAS as questões de prova presentes nele.{disc_hint}{assunto_hint}
+
+Para cada questão identifique:
+- enunciado completo
+- alternativas (se houver)
+- gabarito/resposta correta (se indicado no documento)
+- tipo: multipla_escolha, verdadeiro_falso ou dissertativa
+
+Responda SOMENTE com JSON válido, sem texto extra, sem markdown:
+{{
+  "questoes": [
+    {{
+      "enunciado": "texto da questão",
+      "tipo": "multipla_escolha",
+      "alternativas": [{{"letra":"A","texto":"..."}},{{"letra":"B","texto":"..."}}],
+      "gabarito": "A",
+      "disciplina": "{disciplina}",
+      "assunto": "{assunto}"
+    }}
+  ]
+}}
+
+Se o gabarito não estiver no documento use null. Para dissertativa omita alternativas e gabarito."""
+
+    content_blocks.append({'type': 'text', 'text': prompt})
+
+    try:
+        import anthropic as _anthropic
+        client = _anthropic.Anthropic(api_key=api_key)
+        msg = client.messages.create(
+            model='claude-opus-4-5',
+            max_tokens=8000,
+            messages=[{'role': 'user', 'content': content_blocks}]
+        )
+        raw = msg.content[0].text.strip()
+        if raw.startswith('```'):
+            raw = raw.split('\n', 1)[1].rsplit('```', 1)[0]
+        data = json.loads(raw)
+        return jsonify({'ok': True, 'questoes': data.get('questoes', [])})
+    except Exception as e:
+        return jsonify({'erro': f'Erro ao processar com IA: {e}'}), 500
+
+
+@app.route('/api/salvar-questoes-importadas', methods=['POST'])
+def api_salvar_questoes_importadas():
+    questoes = (request.get_json() or {}).get('questoes', [])
+    salvas = 0
+    for qd in questoes:
+        tipo = qd.get('tipo', 'multipla_escolha')
+        alts = qd.get('alternativas') or []
+        q = Questao(
+            enunciado=qd.get('enunciado', ''),
+            tipo=tipo,
+            gabarito=qd.get('gabarito') or '',
+            disciplina=qd.get('disciplina', ''),
+            assunto=qd.get('assunto', ''),
+            dificuldade='medio',
+            alternativas_json=json.dumps(alts, ensure_ascii=False) if alts else None
+        )
+        db.session.add(q)
+        salvas += 1
+    db.session.commit()
+    return jsonify({'ok': True, 'salvas': salvas})
+
+
 @app.route('/banco/gerar-ia', methods=['POST'])
 def banco_gerar_ia():
     """Gera uma questão via API da Anthropic (Claude)."""

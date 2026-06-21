@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+{% block title %}Importar Questões{% endblock %}
+
+{% block head %}
+<style>
+  .questao-card { border:1px solid #e0e0e0; border-radius:10px; padding:16px; margin-bottom:12px; background:#fff; }
+  .questao-card .num { font-weight:700; color:#1a2e4a; margin-bottom:6px; }
+  .questao-card .enunciado { margin-bottom:8px; }
+  .questao-card .alt { font-size:.9rem; color:#444; margin:2px 0 2px 12px; }
+  .questao-card .gab { font-size:.85rem; font-weight:700; color:#1a7a3c; margin-top:6px; }
+  .questao-card .remover { float:right; }
+  #areaResultado { display:none; }
+  #areaErro { display:none; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center gap-2 mb-4">
+  <a href="{{ url_for('banco_index') }}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left"></i>
+  </a>
+  <h4 class="fw-bold mb-0"><i class="bi bi-file-earmark-arrow-up me-2"></i>Importar Questões de PDF ou Word</h4>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-5">
+    <div class="card">
+      <div class="card-body">
+        <p class="text-muted small mb-3">
+          Envie um arquivo PDF ou Word com questões de prova. A IA vai identificar e extrair todas as questões automaticamente para revisão.
+        </p>
+
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Arquivo <span class="text-danger">*</span></label>
+          <input type="file" id="inputArquivo" class="form-control" accept=".pdf,.docx">
+          <div class="form-text">PDF ou Word (.docx) — máximo 20 MB</div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Disciplina <span class="text-muted fw-normal">(opcional)</span></label>
+          <input type="text" id="inputDisciplina" class="form-control" placeholder="Ex: Periodontia" list="listaDisciplinas">
+          <datalist id="listaDisciplinas">
+            {% for d in disciplinas %}<option value="{{ d }}">{% endfor %}
+          </datalist>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Assunto <span class="text-muted fw-normal">(opcional)</span></label>
+          <input type="text" id="inputAssunto" class="form-control" placeholder="Ex: Periodontite" list="listaAssuntos">
+          <datalist id="listaAssuntos">
+            {% for a in assuntos %}<option value="{{ a }}">{% endfor %}
+          </datalist>
+        </div>
+
+        <button class="btn btn-primary w-100" id="btnImportar">
+          <span id="btnNormal"><i class="bi bi-stars me-1"></i> Extrair questões com IA</span>
+          <span id="btnSpinner" class="d-none">
+            <span class="spinner-border spinner-border-sm me-1"></span> Analisando arquivo…
+          </span>
+        </button>
+
+        <div id="areaErro" class="alert alert-danger mt-3 small"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-7" id="areaResultado">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <h5 class="fw-bold mb-0" id="tituloResultado"></h5>
+      <button class="btn btn-success" id="btnSalvar">
+        <i class="bi bi-check-lg me-1"></i> Salvar todas no banco
+      </button>
+    </div>
+    <div class="text-muted small mb-3">Revise as questões abaixo antes de salvar. Clique em ✕ para remover alguma.</div>
+    <div id="listaQuestoes"></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let questoesExtraidas = [];
+
+document.getElementById('btnImportar').addEventListener('click', async () => {
+  const arquivo = document.getElementById('inputArquivo').files[0];
+  if (!arquivo) {
+    mostrarErro('Selecione um arquivo PDF ou Word.');
+    return;
+  }
+
+  setCarregando(true);
+  document.getElementById('areaErro').style.display = 'none';
+  document.getElementById('areaResultado').style.display = 'none';
+
+  const fd = new FormData();
+  fd.append('arquivo', arquivo);
+  fd.append('disciplina', document.getElementById('inputDisciplina').value.trim());
+  fd.append('assunto', document.getElementById('inputAssunto').value.trim());
+
+  try {
+    const res = await fetch('/api/importar-questoes', { method: 'POST', body: fd });
+    const data = await res.json();
+    if (!res.ok || data.erro) throw new Error(data.erro || 'Erro desconhecido.');
+    questoesExtraidas = data.questoes || [];
+    if (!questoesExtraidas.length) throw new Error('Nenhuma questão encontrada no arquivo.');
+    renderQuestoes();
+  } catch(e) {
+    mostrarErro(e.message);
+  } finally {
+    setCarregando(false);
+  }
+});
+
+function renderQuestoes() {
+  const lista = document.getElementById('listaQuestoes');
+  lista.innerHTML = '';
+  document.getElementById('tituloResultado').textContent =
+    questoesExtraidas.length + ' questão(ões) encontrada(s)';
+
+  questoesExtraidas.forEach((q, i) => {
+    const card = document.createElement('div');
+    card.className = 'questao-card';
+    card.id = 'q_' + i;
+
+    let html = `<div class="num">
+      Questão ${i+1}
+      <button class="btn btn-sm btn-outline-danger remover" onclick="remover(${i})">✕</button>
+    </div>`;
+    html += `<div class="enunciado">${q.enunciado}</div>`;
+    if (q.alternativas && q.alternativas.length) {
+      q.alternativas.forEach(a => {
+        html += `<div class="alt"><b>${a.letra})</b> ${a.texto}</div>`;
+      });
+    }
+    if (q.gabarito) html += `<div class="gab">✓ Gabarito: ${q.gabarito}</div>`;
+    if (q.tipo === 'dissertativa') html += `<div class="gab" style="color:#856404;">Dissertativa</div>`;
+
+    card.innerHTML = html;
+    lista.appendChild(card);
+  });
+
+  document.getElementById('areaResultado').style.display = '';
+}
+
+function remover(i) {
+  questoesExtraidas.splice(i, 1);
+  renderQuestoes();
+}
+
+document.getElementById('btnSalvar').addEventListener('click', async () => {
+  if (!questoesExtraidas.length) return;
+  document.getElementById('btnSalvar').disabled = true;
+  document.getElementById('btnSalvar').innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Salvando…';
+
+  try {
+    const res = await fetch('/api/salvar-questoes-importadas', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ questoes: questoesExtraidas })
+    });
+    const data = await res.json();
+    if (!res.ok || !data.ok) throw new Error(data.erro || 'Erro ao salvar.');
+    window.location.href = '/banco?msg=' + data.salvas + '_importadas';
+  } catch(e) {
+    mostrarErro(e.message);
+    document.getElementById('btnSalvar').disabled = false;
+    document.getElementById('btnSalvar').innerHTML = '<i class="bi bi-check-lg me-1"></i> Salvar todas no banco';
+  }
+});
+
+function mostrarErro(msg) {
+  const el = document.getElementById('areaErro');
+  el.textContent = '⚠️ ' + msg;
+  el.style.display = '';
+}
+
+function setCarregando(v) {
+  document.getElementById('btnNormal').classList.toggle('d-none', v);
+  document.getElementById('btnSpinner').classList.toggle('d-none', !v);
+  document.getElementById('btnImportar').disabled = v;
+}
+</script>
+{% endblock %}
