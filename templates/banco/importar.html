@@ -180,6 +180,7 @@ document.getElementById('btnSalvar').addEventListener('click', async () => {
 });
 
 function mostrarErro(msg) {
+  alert('ERRO: ' + msg);
   const el = document.getElementById('areaErro');
   el.textContent = '⚠️ ' + msg;
   el.style.display = 'block';
