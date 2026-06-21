@@ -815,25 +815,33 @@ def api_importar_questoes():
 
     file_bytes = arquivo.read()
     filename   = arquivo.filename.lower()
-    content_blocks = []
 
+    # Extrai texto localmente (mais rápido que enviar binário para a IA)
+    texto_extraido = ''
     if filename.endswith('.pdf'):
-        b64 = base64.b64encode(file_bytes).decode()
-        content_blocks.append({
-            'type': 'document',
-            'source': {'type': 'base64', 'media_type': 'application/pdf', 'data': b64}
-        })
+        try:
+            import fitz as _fitz, io as _io
+            doc = _fitz.open(stream=_io.BytesIO(file_bytes), filetype='pdf')
+            texto_extraido = '\n'.join(p.get_text() for p in doc)
+        except Exception as e:
+            return jsonify({'erro': f'Erro ao ler PDF: {e}'}), 400
     elif filename.endswith('.docx'):
         try:
             from docx import Document as DocxDocument
             import io as _io
-            doc  = DocxDocument(_io.BytesIO(file_bytes))
-            texto = '\n'.join(p.text for p in doc.paragraphs if p.text.strip())
+            doc = DocxDocument(_io.BytesIO(file_bytes))
+            texto_extraido = '\n'.join(p.text for p in doc.paragraphs if p.text.strip())
         except Exception as e:
             return jsonify({'erro': f'Erro ao ler arquivo Word: {e}'}), 400
-        content_blocks.append({'type': 'text', 'text': f'Conteúdo do arquivo:\n\n{texto}'})
     else:
         return jsonify({'erro': 'Formato não suportado. Use PDF ou DOCX (.docx).'}), 400
+
+    if not texto_extraido.strip():
+        return jsonify({'erro': 'Não foi possível extrair texto do arquivo. Verifique se o PDF não é uma imagem escaneada.'}), 400
+
+    # Limita a 12000 caracteres para evitar timeout
+    texto_extraido = texto_extraido[:12000]
+    content_blocks = [{'type': 'text', 'text': f'Conteúdo do arquivo:\n\n{texto_extraido}'}]
 
     disc_hint    = f'\nDisciplina padrão: {disciplina}' if disciplina else ''
     assunto_hint = f'\nAssunto padrão: {assunto}' if assunto else ''

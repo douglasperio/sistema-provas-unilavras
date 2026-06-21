@@ -99,7 +99,9 @@ document.getElementById('btnImportar').addEventListener('click', async () => {
 
   try {
     const res = await fetch('/api/importar-questoes', { method: 'POST', body: fd });
-    const data = await res.json();
+    let data;
+    try { data = await res.json(); }
+    catch(_) { throw new Error('O servidor demorou demais para responder. Tente um arquivo menor ou com menos questões.'); }
     if (!res.ok || data.erro) throw new Error(data.erro || 'Erro desconhecido.');
     questoesExtraidas = data.questoes || [];
     if (!questoesExtraidas.length) throw new Error('Nenhuma questão encontrada no arquivo.');
