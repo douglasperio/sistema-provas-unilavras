@@ -1636,52 +1636,42 @@ def configuracoes():
 def migrar_banco():
     """Adiciona colunas e tabelas novas sem apagar dados existentes."""
     from sqlalchemy import text
-    with db.engine.connect() as conn:
 
-        # ── Colunas novas na tabela questao ──
+    def _exec(sql):
+        """Executa um comando em conexão própria para evitar transação abortada no PostgreSQL."""
         try:
-            conn.execute(text("ALTER TABLE questao ADD COLUMN assunto TEXT DEFAULT ''"))
-            conn.commit()
-        except Exception:
-            pass   # coluna já existe
-
-        # ── Colunas novas na tabela aplicacao_prova ──
-        try:
-            conn.execute(text("ALTER TABLE aplicacao_prova ADD COLUMN num_versoes INTEGER DEFAULT 1"))
-            conn.commit()
+            with db.engine.connect() as c:
+                c.execute(text(sql))
+                c.commit()
         except Exception:
             pass
 
-        # ── Colunas novas na tabela resposta_aluno ──
-        try:
-            conn.execute(text("ALTER TABLE resposta_aluno ADD COLUMN versao_id INTEGER"))
-            conn.commit()
-        except Exception:
-            pass
+    _exec("ALTER TABLE questao ADD COLUMN assunto TEXT DEFAULT ''")
+    _exec("ALTER TABLE aplicacao_prova ADD COLUMN num_versoes INTEGER DEFAULT 1")
+    _exec("ALTER TABLE resposta_aluno ADD COLUMN versao_id INTEGER")
 
-        # ── Tabela nova: versao_prova (sintaxe compatível com SQLite e PostgreSQL) ──
-        dialect = db.engine.dialect.name
-        if dialect == 'postgresql':
-            conn.execute(text("""
-                CREATE TABLE IF NOT EXISTS versao_prova (
-                    id SERIAL PRIMARY KEY,
-                    aplicacao_id INTEGER NOT NULL,
-                    codigo TEXT,
-                    questoes_json TEXT,
-                    FOREIGN KEY (aplicacao_id) REFERENCES aplicacao_prova(id)
-                )
-            """))
-        else:
-            conn.execute(text("""
-                CREATE TABLE IF NOT EXISTS versao_prova (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    aplicacao_id INTEGER NOT NULL,
-                    codigo TEXT,
-                    questoes_json TEXT,
-                    FOREIGN KEY (aplicacao_id) REFERENCES aplicacao_prova(id)
-                )
-            """))
-        conn.commit()
+    # Tabela versao_prova — sintaxe varia entre SQLite e PostgreSQL
+    dialect = db.engine.dialect.name
+    if dialect == 'postgresql':
+        _exec("""
+            CREATE TABLE IF NOT EXISTS versao_prova (
+                id SERIAL PRIMARY KEY,
+                aplicacao_id INTEGER NOT NULL,
+                codigo TEXT,
+                questoes_json TEXT,
+                FOREIGN KEY (aplicacao_id) REFERENCES aplicacao_prova(id)
+            )
+        """)
+    else:
+        _exec("""
+            CREATE TABLE IF NOT EXISTS versao_prova (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                aplicacao_id INTEGER NOT NULL,
+                codigo TEXT,
+                questoes_json TEXT,
+                FOREIGN KEY (aplicacao_id) REFERENCES aplicacao_prova(id)
+            )
+        """)
 
 
 # ─── MAIN ─────────────────────────────────────────────────────────────────────
