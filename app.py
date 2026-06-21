@@ -1485,17 +1485,21 @@ def resultados_exportar(id):
 @app.route('/url-publica')
 def url_publica():
     import urllib.request, json as _json
-    url_ngrok = None
+    # Tenta ngrok local primeiro
+    url_publica = None
     try:
         with urllib.request.urlopen('http://localhost:4040/api/tunnels', timeout=2) as r:
             data = _json.loads(r.read())
             for t in data.get('tunnels', []):
                 if t.get('proto') == 'https':
-                    url_ngrok = t['public_url']
+                    url_publica = t['public_url']
                     break
     except Exception:
         pass
-    return render_template('url_publica.html', url_ngrok=url_ngrok)
+    # Se não tiver ngrok, usa a própria URL do servidor (Railway/Render/etc)
+    if not url_publica:
+        url_publica = request.host_url.rstrip('/')
+    return render_template('url_publica.html', url_ngrok=url_publica)
 
 
 @app.route('/configuracoes', methods=['GET','POST'])
