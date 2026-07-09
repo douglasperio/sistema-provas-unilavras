@@ -116,7 +116,7 @@ class Turma(db.Model):
     alunos  = db.relationship('Aluno', backref='turma', lazy=True,
                               cascade='all, delete-orphan')
     def __repr__(self):
-        return f'{self.nome} – {self.periodo}' if self.periodo else self.nome
+        return f'{self.nome} - {self.periodo}' if self.periodo else self.nome
 
 
 class Aluno(db.Model):
@@ -945,7 +945,7 @@ def banco_gerar_ia():
     info_fmt = f'- Instrução especial: {info_complementar}' if info_complementar else ''
     disc_fmt = f'- Disciplina: {disciplina}' if disciplina else ''
 
-    prompt = f"""Você é um professor do curso de {curso} criando questões de prova para estudantes universitários (Unilavras – Centro Universitário de Lavras).
+    prompt = f"""Você é um professor do curso de {curso} criando questões de prova para estudantes universitários (Unilavras - Centro Universitário de Lavras).
 
 Crie UMA questão de {tipo_map.get(tipo, tipo)} com estas características:
 - Curso: {curso}
@@ -1691,7 +1691,7 @@ if __name__ == '__main__':
     _local_ip = get_local_ip()
     print()
     print('=' * 50)
-    print(f'  Sistema de Provas – Unilavras')
+    print(f'  Sistema de Provas - Unilavras')
     print(f'  PC    : http://localhost:5001')
     print(f'  Celular: http://{_local_ip}:5001')
     print('=' * 50)
