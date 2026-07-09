@@ -4,7 +4,7 @@ from datetime import datetime
 import json, uuid, io, os, random, math, base64
 import qrcode
 
-# ─── CERTIFICADO SSL (HTTPS local) ────────────────────────────────────────────
+# --- CERTIFICADO SSL (HTTPS local) --------------------------------------------
 
 def _gerar_cert_ssl(local_ip: str) -> bool:
     """Gera cert.pem / key.pem auto-assinados cobrindo o IP local atual.
@@ -25,7 +25,7 @@ def _gerar_cert_ssl(local_ip: str) -> bool:
             if local_ip in ips:
                 return True   # já cobre o IP atual
         except Exception:
-            pass   # cert inválido → regenera
+            pass   # cert inválido -> regenera
 
     try:
         import datetime as _dt, ipaddress
@@ -107,7 +107,7 @@ def save_config(data):
         json.dump(data, f, ensure_ascii=False, indent=2)
 
 
-# ─── MODELS ───────────────────────────────────────────────────────────────────
+# --- MODELS -------------------------------------------------------------------
 
 class Turma(db.Model):
     id      = db.Column(db.Integer, primary_key=True)
@@ -133,7 +133,7 @@ class Questao(db.Model):
     alternativas_json = db.Column(db.Text)
     gabarito          = db.Column(db.String(10))
     disciplina        = db.Column(db.String(100), default='')
-    assunto           = db.Column(db.String(200), default='')   # ← NOVO
+    assunto           = db.Column(db.String(200), default='')   # <- NOVO
     dificuldade       = db.Column(db.String(20), default='medio')
     criado_em         = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -229,7 +229,7 @@ class AplicacaoProva(db.Model):
 class RespostaAluno(db.Model):
     id             = db.Column(db.Integer, primary_key=True)
     aplicacao_id   = db.Column(db.Integer, db.ForeignKey('aplicacao_prova.id'), nullable=False)
-    aluno_id       = db.Column(db.Integer, db.ForeignKey('aluno.id'), nullable=True)   # nullable → cópia extra
+    aluno_id       = db.Column(db.Integer, db.ForeignKey('aluno.id'), nullable=True)   # nullable -> cópia extra
     versao_id      = db.Column(db.Integer, db.ForeignKey('versao_prova.id'), nullable=True)
     token          = db.Column(db.String(36), unique=True, nullable=False)
     respostas_json = db.Column(db.Text)   # {questao_id: letra_escolhida}
@@ -246,7 +246,7 @@ class RespostaAluno(db.Model):
         return self.nota_final is not None
 
 
-# ─── HELPERS ──────────────────────────────────────────────────────────────────
+# --- HELPERS ------------------------------------------------------------------
 
 def gerar_qr(data: str) -> str:
     qr = qrcode.QRCode(version=1, box_size=6, border=2,
@@ -346,7 +346,7 @@ def calcular_nota_versao(versao: VersaoProva, prova: Prova, resp: RespostaAluno)
     return round(pontos / total_peso * prova.valor_total, 2) if total_peso > 0 else 0.0
 
 
-# ─── PDF GENERATION ───────────────────────────────────────────────────────────
+# --- PDF GENERATION -----------------------------------------------------------
 
 def gerar_pdf_aplicacao(aplicacao: AplicacaoProva) -> io.BytesIO:
     from reportlab.lib.pagesizes import A4
@@ -388,11 +388,11 @@ def gerar_pdf_aplicacao(aplicacao: AplicacaoProva) -> io.BytesIO:
         versao = resp.versao
         aluno  = resp.aluno
 
-        # ── QR code image ──
+        # -- QR code image --
         qr_buf = gerar_qr_bytes(resp.token)
         qr_img = RLImage(qr_buf, width=28*mm, height=28*mm)
 
-        # ── Cabeçalho ──
+        # -- Cabeçalho --
         header_data = [[
             Paragraph(f'<b>{escola}</b><br/><font size=8>{curso}</font>', sTitle),
             qr_img,
@@ -409,8 +409,8 @@ def gerar_pdf_aplicacao(aplicacao: AplicacaoProva) -> io.BytesIO:
         story.append(header_tbl)
         story.append(Spacer(1, 2*mm))
 
-        # ── Dados da prova ──
-        versao_cod = f'  |  <b>Versão: <font color="red">{versao.codigo if versao else "—"}</font></b>' if versao else ''
+        # -- Dados da prova --
+        versao_cod = f'  |  <b>Versão: <font color="red">{versao.codigo if versao else "-"}</font></b>' if versao else ''
         story.append(Paragraph(
             f'<b>{prova.titulo}</b>  |  {prova.disciplina}  |  '
             f'{aplicacao.data_aplicacao.strftime("%d/%m/%Y")}{versao_cod}',
@@ -418,7 +418,7 @@ def gerar_pdf_aplicacao(aplicacao: AplicacaoProva) -> io.BytesIO:
                            spaceBefore=1*mm, spaceAfter=1*mm)
         ))
 
-        # ── Dados do aluno (em branco — aluno preenche na hora) ──
+        # -- Dados do aluno (em branco - aluno preenche na hora) --
         turma_val = str(aplicacao.turma) if aplicacao.turma else '___________'
         aluno_data = [[
             Paragraph('<b>Aluno:</b> _____________________________________________', sLabel),
@@ -436,16 +436,16 @@ def gerar_pdf_aplicacao(aplicacao: AplicacaoProva) -> io.BytesIO:
         story.append(aluno_tbl)
         story.append(Spacer(1, 2*mm))
 
-        # ── Instrução ──
+        # -- Instrução --
         if prova.instrucoes:
             story.append(Paragraph(f'<i>Instrução:</i> {prova.instrucoes}',
                          ParagraphStyle('inst', fontSize=8, fontName='Helvetica',
                                         textColor=colors.HexColor('#444'),
                                         spaceAfter=2*mm, borderPad=2)))
 
-        # ── Gabarito OMR com marcas de registro nos cantos ──
+        # -- Gabarito OMR com marcas de registro nos cantos --
         story.append(Paragraph(
-            '<b>GABARITO</b> — Preencha <u>completamente</u> apenas um quadrado por questão',
+            '<b>GABARITO</b> - Preencha <u>completamente</u> apenas um quadrado por questão',
             ParagraphStyle('gab_title', fontSize=9, fontName='Helvetica-Bold',
                            spaceAfter=1.5*mm)))
 
@@ -491,12 +491,12 @@ def gerar_pdf_aplicacao(aplicacao: AplicacaoProva) -> io.BytesIO:
                 W, H = self.width, self.height
                 REG  = self.REG
 
-                # ── 4 Marcas de registro (quadrados pretos sólidos nos cantos) ──
+                # -- 4 Marcas de registro (quadrados pretos sólidos nos cantos) --
                 c.setFillColor(C.black)
                 for rx, ry in [(0, H-REG), (W-REG, H-REG), (0, 0), (W-REG, 0)]:
                     c.rect(rx, ry, REG, REG, stroke=0, fill=1)
 
-                # ── Grade interna (entre as marcas) ──
+                # -- Grade interna (entre as marcas) --
                 gx = REG
                 gy = REG
                 gw = W - 2*REG
@@ -511,7 +511,7 @@ def gerar_pdf_aplicacao(aplicacao: AplicacaoProva) -> io.BytesIO:
                 cell_w = max(1*mm, (gw - self.NUM_W) / self.max_opts)
                 cell_sz = min(cell_w, self.ROW) * 0.70
 
-                # ── Cabeçalho ──
+                # -- Cabeçalho --
                 hdr_y = gy + gh - self.HDR
                 c.setFillColor(C.HexColor('#eeeeee'))
                 c.setStrokeColor(C.HexColor('#bbbbbb'))
@@ -531,7 +531,7 @@ def gerar_pdf_aplicacao(aplicacao: AplicacaoProva) -> io.BytesIO:
                 c.setLineWidth(0.5)
                 c.line(gx + self.NUM_W, hdr_y, gx + self.NUM_W, hdr_y + self.HDR)
 
-                # ── Linhas de questões ──
+                # -- Linhas de questões --
                 for idx, qd in enumerate(self.qs_data):
                     row_y  = gy + gh - self.HDR - (idx + 1) * self.ROW
                     cy_ctr = row_y + self.ROW / 2
@@ -607,10 +607,10 @@ def gerar_pdf_aplicacao(aplicacao: AplicacaoProva) -> io.BytesIO:
         ))
         story.append(PageBreak())
 
-        # ── Páginas de Questões ──
+        # -- Páginas de Questões --
         story.append(Paragraph(
-            f'<b>{prova.titulo}</b>  —  {prova.disciplina}'
-            + (f'  —  Versão <font color="red"><b>{versao.codigo}</b></font>' if versao else ''),
+            f'<b>{prova.titulo}</b>  -  {prova.disciplina}'
+            + (f'  -  Versão <font color="red"><b>{versao.codigo}</b></font>' if versao else ''),
             sTitle))
         story.append(HRFlowable(width='100%', thickness=0.5, color=colors.black, spaceAfter=3*mm))
 
@@ -633,7 +633,7 @@ def gerar_pdf_aplicacao(aplicacao: AplicacaoProva) -> io.BytesIO:
     return buf_pdf
 
 
-# ─── EXCEL EXPORT ─────────────────────────────────────────────────────────────
+# --- EXCEL EXPORT -------------------------------------------------------------
 
 def exportar_resultados_excel(aplicacao: AplicacaoProva) -> io.BytesIO:
     import openpyxl
@@ -641,7 +641,7 @@ def exportar_resultados_excel(aplicacao: AplicacaoProva) -> io.BytesIO:
 
     wb = openpyxl.Workbook()
 
-    # ── Aba 1: Resumo ──
+    # -- Aba 1: Resumo --
     ws = wb.active
     ws.title = 'Resultados'
     hdr_font = Font(bold=True, color='FFFFFF')
@@ -671,9 +671,9 @@ def exportar_resultados_excel(aplicacao: AplicacaoProva) -> io.BytesIO:
 
         row = [
             i,
-            resp.aluno.nome if resp.aluno else '—',
-            resp.aluno.matricula if resp.aluno else '—',
-            resp.versao.codigo if resp.versao else '—',
+            resp.aluno.nome if resp.aluno else '-',
+            resp.aluno.matricula if resp.aluno else '-',
+            resp.versao.codigo if resp.versao else '-',
             f'{nota:.1f}' if nota is not None else 'Pendente',
             situacao,
         ]
@@ -686,7 +686,7 @@ def exportar_resultados_excel(aplicacao: AplicacaoProva) -> io.BytesIO:
     ws.column_dimensions['C'].width = 15
     ws.freeze_panes = 'A2'
 
-    # ── Aba 2: Gabarito por versão ──
+    # -- Aba 2: Gabarito por versão --
     ws2 = wb.create_sheet('Gabaritos')
     ws2.cell(row=1, column=1, value='Versão').font = Font(bold=True)
     ws2.cell(row=1, column=2, value='Questão').font = Font(bold=True)
@@ -698,7 +698,7 @@ def exportar_resultados_excel(aplicacao: AplicacaoProva) -> io.BytesIO:
         for n, qd in enumerate(versao.questoes_data, 1):
             ws2.cell(row=row, column=1, value=versao.codigo)
             ws2.cell(row=row, column=2, value=n)
-            ws2.cell(row=row, column=3, value=qd.get('gabarito') or '—')
+            ws2.cell(row=row, column=3, value=qd.get('gabarito') or '-')
             ws2.cell(row=row, column=4, value=qd.get('peso', 1.0))
             row += 1
 
@@ -708,7 +708,7 @@ def exportar_resultados_excel(aplicacao: AplicacaoProva) -> io.BytesIO:
     return buf
 
 
-# ─── ROUTES: DASHBOARD ────────────────────────────────────────────────────────
+# --- ROUTES: DASHBOARD --------------------------------------------------------
 
 @app.route('/')
 def index():
@@ -726,7 +726,7 @@ def index():
     )
 
 
-# ─── ROUTES: BANCO ────────────────────────────────────────────────────────────
+# --- ROUTES: BANCO ------------------------------------------------------------
 
 @app.route('/banco')
 def banco_index():
@@ -969,7 +969,7 @@ Responda SOMENTE com um JSON válido (sem texto extra, sem markdown), neste form
 Para verdadeiro/falso use alternativas = [{{"letra":"V","texto":"Verdadeiro"}},{{"letra":"F","texto":"Falso"}}].
 Para dissertativa, omita "alternativas" e "gabarito"."""
 
-    # ── Montar blocos de conteúdo para a API ──
+    # -- Montar blocos de conteúdo para a API --
     content_blocks = []
 
     if arquivo and arquivo.filename:
@@ -1030,7 +1030,7 @@ def banco_excluir(id):
     return redirect(url_for('banco_index'))
 
 
-# ─── ROUTES: TURMAS ───────────────────────────────────────────────────────────
+# --- ROUTES: TURMAS -----------------------------------------------------------
 
 @app.route('/turmas')
 def turmas_index():
@@ -1127,7 +1127,7 @@ def aluno_excluir(id):
     return redirect(url_for('turma_detalhe', id=turma_id))
 
 
-# ─── ROUTES: PROVAS ───────────────────────────────────────────────────────────
+# --- ROUTES: PROVAS -----------------------------------------------------------
 
 @app.route('/provas')
 def provas_index():
@@ -1287,7 +1287,7 @@ def prova_excluir(id):
     return redirect(url_for('provas_index'))
 
 
-# ─── ROUTES: CORREÇÃO ─────────────────────────────────────────────────────────
+# --- ROUTES: CORREÇÃO ---------------------------------------------------------
 
 @app.route('/correcao')
 def correcao_scanner():
@@ -1347,9 +1347,9 @@ def correcao_form(token):
         is_mobile = any(x in ua for x in ['Mobile', 'Android', 'iPhone', 'iPad'])
         if is_mobile:
             nome_aluno = aluno.nome if aluno else 'Aluno'
-            nota_fmt   = f'{resp_aluno.nota_final:.1f}' if resp_aluno.nota_final is not None else '—'
+            nota_fmt   = f'{resp_aluno.nota_final:.1f}' if resp_aluno.nota_final is not None else '-'
             return redirect(url_for('mobile_aplicacao', aplicacao_id=aplicacao.id,
-                                    toast=f'{nome_aluno} — Nota: {nota_fmt}'))
+                                    toast=f'{nome_aluno} - Nota: {nota_fmt}'))
 
         return redirect(url_for('correcao_form', token=token))
 
@@ -1374,7 +1374,7 @@ def correcao_form(token):
         aluno=aluno, versao=versao, qs_data=qs_data)
 
 
-# ─── CORREÇÃO AUTOMÁTICA POR FOTO (OMR/OpenCV) ───────────────────────────────
+# --- CORREÇÃO AUTOMÁTICA POR FOTO (OMR/OpenCV) -------------------------------
 
 def _qs_data_de(resp_aluno):
     """Lista de questões na ordem impressa (versão embaralhada se houver)."""
@@ -1411,7 +1411,7 @@ def _layout_omr(qs_data):
 
 @app.route('/correcao-foto')
 def correcao_foto():
-    """Fluxo: escolher aplicação → escolher aluno → fotografar gabarito."""
+    """Fluxo: escolher aplicação -> escolher aluno -> fotografar gabarito."""
     aplicacao_id = request.args.get('aplicacao_id', type=int)
     aluno_id = request.args.get('aluno_id', type=int)
     aplicacao = AplicacaoProva.query.get(aplicacao_id) if aplicacao_id else None
@@ -1527,7 +1527,7 @@ def api_corrigir_foto():
     })
 
 
-# ─── HELPERS: REDE LOCAL ──────────────────────────────────────────────────────
+# --- HELPERS: REDE LOCAL ------------------------------------------------------
 
 def get_local_ip() -> str:
     """Retorna o IP da máquina na rede local (Wi-Fi/LAN)."""
@@ -1542,7 +1542,7 @@ def get_local_ip() -> str:
         return '127.0.0.1'
 
 
-# ─── ROUTES: PÁGINA MOBILE ────────────────────────────────────────────────────
+# --- ROUTES: PÁGINA MOBILE ----------------------------------------------------
 
 @app.route('/mobile')
 def mobile_index():
@@ -1565,7 +1565,7 @@ def mobile_aplicacao(aplicacao_id):
         aplicacao=aplicacao, pendentes=pendentes, corrigidos=corrigidos)
 
 
-# ─── ROUTES: RESULTADOS ───────────────────────────────────────────────────────
+# --- ROUTES: RESULTADOS -------------------------------------------------------
 
 @app.route('/resultados')
 def resultados_index():
@@ -1603,7 +1603,7 @@ def resultados_exportar(id):
         return redirect(url_for('resultados_aplicacao', id=id))
 
 
-# ─── ROUTES: CONFIGURAÇÕES ────────────────────────────────────────────────────
+# --- ROUTES: CONFIGURAÇÕES ----------------------------------------------------
 
 @app.route('/url-publica')
 def url_publica():
@@ -1638,7 +1638,7 @@ def configuracoes():
     return render_template('configuracoes.html', cfg=cfg)
 
 
-# ─── MIGRAÇÃO DO BANCO ────────────────────────────────────────────────────────
+# --- MIGRAÇÃO DO BANCO --------------------------------------------------------
 
 def migrar_banco():
     """Adiciona colunas e tabelas novas sem apagar dados existentes."""
@@ -1657,7 +1657,7 @@ def migrar_banco():
     _exec("ALTER TABLE aplicacao_prova ADD COLUMN num_versoes INTEGER DEFAULT 1")
     _exec("ALTER TABLE resposta_aluno ADD COLUMN versao_id INTEGER")
 
-    # Tabela versao_prova — sintaxe varia entre SQLite e PostgreSQL
+    # Tabela versao_prova - sintaxe varia entre SQLite e PostgreSQL
     dialect = db.engine.dialect.name
     if dialect == 'postgresql':
         _exec("""
@@ -1681,7 +1681,7 @@ def migrar_banco():
         """)
 
 
-# ─── MAIN ─────────────────────────────────────────────────────────────────────
+# --- MAIN ---------------------------------------------------------------------
 
 with app.app_context():
     db.create_all()

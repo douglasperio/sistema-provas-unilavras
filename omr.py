@@ -2,7 +2,7 @@
 Leitura automática da grade de gabarito (OMR) com OpenCV.
 
 Pipeline:
-  1. Decodifica o QR Code da folha (token → RespostaAluno/versão).
+  1. Decodifica o QR Code da folha (token -> RespostaAluno/versão).
   2. Localiza as 4 marcas de registro (quadrados pretos) nos cantos da grade.
   3. Corrige perspectiva/rotação da foto (warp para o plano da grade em mm).
   4. Lê o preenchimento dos quadradinhos e devolve as respostas por linha.
@@ -20,7 +20,7 @@ import base64
 import cv2
 import numpy as np
 
-# ── Geometria (mm) — deve coincidir com GradeOMR ───────────────────
+# -- Geometria (mm) - deve coincidir com GradeOMR -------------------
 GRID_W = 182.0
 REG = 8.0
 HDR = 7.0
@@ -105,7 +105,7 @@ def _find_corner_markers(gray):
 
 def _pick_grid_quad(cands, qr_center):
     """Escolhe as 4 marcas que formam o maior quadrilátero e ordena
-    TL, TR, BR, BL. O QR fica no cabeçalho, acima e à direita da grade —
+    TL, TR, BR, BL. O QR fica no cabeçalho, acima e à direita da grade -
     a marca mais próxima dele é a do canto superior DIREITO (TR)."""
     from itertools import combinations
     centers = np.array([c.mean(axis=0) for c in cands])
