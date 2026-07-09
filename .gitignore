@@ -13,3 +13,5 @@ cloudflared.exe
 iniciar_internet.bat
 iniciar_oculto.vbs
 debug_*.jpg
+wsgi_pythonanywhere.py
+provas_backup.db
