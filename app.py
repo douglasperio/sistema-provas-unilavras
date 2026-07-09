@@ -867,7 +867,7 @@ Responda SOMENTE com JSON válido (sem texto antes ou depois, sem markdown):
       "assunto": "{assunto}"
     }}
   ]
-}}
+}}"""
 
     content_blocks.append({'type': 'text', 'text': prompt})
 
